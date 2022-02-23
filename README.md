@@ -1,4 +1,4 @@
-# Gene-Language-Correspondence (GLC) 
+# Genetics-Linguistics-Correspondence (GLC) 
 is a framework to study the evolution mechanism shared by gene and language.
 
 For the details, please read our paper: 
