@@ -18,25 +18,23 @@ from Module.Curve_Fitting_MLE import *
 from scipy.optimize import curve_fit
 
 def build_edge(coordinate):
-    '''construct the graph of word and syllagram
-       G_word: if two words appear in the same syl, there is a edge
-       G_syl: if two syls aooear in the same word, they is a edge
+    '''construct the graph of block and component
+       G_block: if two blocks appear in the same compo, there is a edge
+       G_compo: if two components appear in the same block, they is a edge
        
-       paras:
-       ------------------------
-       coordinate: output from draw_RRD_plot which is defined in Module.count
+       ---Input
+           coordinate: output from draw_RRD_plot() which is defined in Module.count
        
-       output:
-       ------------------------
-       graph_word: list, contains G_word, cluster_word, and word_degree_sequence
-       1. G_word: nx.Graph(), constructed by nodes (words) and edges 
-       2. cluster_word: nx.clustering(), clustering coefficient of nodes in G_word
-       3. word_degree_sequence: G_word.degree(), sequence sorted by degree of nodes in G_word
+       ---Return
+       1. graph_block: list, contains G_block, cluster_block, and block_degree_sequence
+           (1) G_block: nx.Graph(), constructed by nodes (blocks) and edges 
+           (2) cluster_block: nx.clustering(), clustering coefficient of nodes in G_block
+           (3) block_degree_sequence: G_block.degree(), sequence sorted by degree of nodes in G_block
        
-       graph_syl: list, contains G_syl, cluster_syl, and syl_degree_sequence
-       1. G_syl: nx.Graph(), constructed by nodes (syllagrams) and edges
-       2. cluster_syl: nx.clustering(), clustering coefficient of nodes in G_syl
-       3. syl_degree_sequence:  G_syl.degree(), sequence sorted by degree of nodes in G_syl       
+       2. graph_compo: list, contains G_compo, cluster_compo, and compo_degree_sequence
+           (1) G_compo: nx.Graph(), constructed by nodes (components) and edges
+           (2) cluster_compo: nx.clustering(), clustering coefficient of nodes in G_compo
+           (3) compo_degree_sequence:  G_compo.degree(), sequence sorted by degree of nodes in G_compo       
     '''    
     
     x, y = [], []
@@ -45,71 +43,89 @@ def build_edge(coordinate):
         y.append(coordinate[i][1])
 
     temp = sorted(coordinate, key = lambda x: x[1])
-    edge_word = np.zeros((max(x), max(x)))
-    lonely_word = [] #share no syl to other word
-    edge_word_list = []
+    edge_block = np.zeros((max(x), max(x)))
+    lonely_block = [] #share no components to other block
+    edge_block_list = []
 
     for j in range(max(y)):
         col = []
         for i in temp:
-            if i[1] == j+1:   #word share the same syl
+            if i[1] == j+1:   #block share the same components
                 col.append(i[0])
             elif i[1] > j+1:
                 break
         for k in range(len(col)):
             if len(col) == 1:
-                lonely_word.append((col[k], col[k]))
+                lonely_block.append((col[k], col[k]))
             else:
                 for m in range(k+1, len(col)):
-                    edge_word[col[k]-1][col[m]-1] += 1
-                    edge_word[col[m]-1][col[k]-1] += 1
-                    edge_word_list.append((col[k], col[m]))
+                    edge_block[col[k]-1][col[m]-1] += 1
+                    edge_block[col[m]-1][col[k]-1] += 1
+                    edge_block_list.append((col[k], col[m]))
                     
     temp = sorted(coordinate, key = lambda x: x[0])
-    edge_syl = np.zeros((max(y), max(y)))
-    lonely_syl = []  #share no word to other syl
-    edge_syl_list = []
+    edge_compo = np.zeros((max(y), max(y)))
+    lonely_compo = []  #share no block to other components
+    edge_compo_list = []
     
     for j in range(max(x)):
         com = [] 
         for i in temp:
-            if i[0] == j+1:   #syl share the same word
+            if i[0] == j+1:   #components share the same block
                 com.append(i[1])
             elif i[0] > j+1:
                 break
         for k in range(len(com)):
             if len(com) == 1:
-                lonely_syl.append((com[k], com[k]))
+                lonely_compo.append((com[k], com[k]))
             else:
                 for m in range(k+1, len(com)):
-                    edge_syl[com[k]-1][com[m]-1] += 1
-                    edge_syl[com[m]-1][com[k]-1] += 1
-                    edge_syl_list.append((com[k], com[m]))
+                    edge_compo[com[k]-1][com[m]-1] += 1
+                    edge_compo[com[m]-1][com[k]-1] += 1
+                    edge_compo_list.append((com[k], com[m]))
                     
-    G_word = nx.Graph()
-    G_word.add_edges_from(edge_word_list)
-    cluster_word = nx.clustering(G_word)
-    word_degree_sequence = sorted([d for n, d in G_word.degree()], reverse=True)  # degree sequence
+    G_block = nx.Graph()
+    G_block.add_edges_from(edge_block_list)
+    cluster_block = nx.clustering(G_block)
+    block_degree_sequence = sorted([d for n, d in G_block.degree()], reverse=True)  # degree sequence
 
-    graph_word = (G_word, cluster_word, word_degree_sequence)
+    graph_block = (G_block, cluster_block, block_degree_sequence)
     
-    G_syl = nx.Graph()
-    G_syl.add_edges_from(edge_syl_list)
-    cluster_syl = nx.clustering(G_syl)
-    syl_degree_sequence = sorted([d for n, d in G_syl.degree()], reverse=True)  # degree sequence
+    G_compo = nx.Graph()
+    G_compo.add_edges_from(edge_compo_list)
+    cluster_compo = nx.clustering(G_compo)
+    compo_degree_sequence = sorted([d for n, d in G_compo.degree()], reverse=True)  # degree sequence
     
-    graph_syl = (G_syl, cluster_syl, syl_degree_sequence)
-    return graph_word, graph_syl
+    graph_compo = (G_compo, cluster_compo, compo_degree_sequence)
+    return graph_block, graph_compo
 
-def plot_cluster_word(name, cluster_word, FORMAT = 'pdf', Path = ''):
+def plot_cluster_block(name, cluster_block, FORMAT = 'pdf', Path = ''):
     '''
-    calculate the local clustering coefficient and cumulative probability of word layer
+    calculate the local clustering coefficient and cumulative probability of block layer
+    
+    ---Input
+    1. name: string
+        name of the plot
+        
+    2. cluster_block: graph_block[2]
+        graph_block is return of build_edge
+        
+    3. FORMAT: string
+        The format of your plot. Most backends support png, pdf, ps, eps and svg. 
+        else: just show plot instead of saving.
+    
+    4. Path: file path for saving picture
+        Default: save at current document
+        if Path == np.nan, no figure will be saved (just show it) 
+        
+    ---Output
+        save or show a figure of local clustering coefficient and cumulative probability of block layer
     '''
 
     fig, ax = plt.subplots()
 
-    cluster_rank_word = list(cluster_word)
-    cluster_coef_word = sorted([cluster_word[i] for i in cluster_word], reverse = True)
+    cluster_rank_block = list(cluster_block)
+    cluster_coef_block = sorted([cluster_block[i] for i in cluster_block], reverse = True)
     plt.title('Cumulative probability of $C_b$', fontsize = 20)
     plt.xlabel('Local clustering coefficient $C_b$', size = 20)
     plt.ylabel('$P(x|x\leq C_b)$', size = 20)
@@ -117,29 +133,47 @@ def plot_cluster_word(name, cluster_word, FORMAT = 'pdf', Path = ''):
     ax.tick_params(axis='y', labelsize=15)
     #https://stackoverflow.com/questions/6774086/why-is-my-xlabel-cut-off-in-my-matplotlib-plot
     plt.gcf().subplots_adjust(left = 0.17, bottom = 0.17)
-    plt.hist(cluster_coef_word, bins = 20, cumulative=True, density = 1)
+    plt.hist(cluster_coef_block, bins = 20, cumulative=True, density = 1)
     ym, yM = plt.ylim()
     xm, xM = plt.xlim()
-    plt.text(xM/10+xm*9/10, yM*4/5, 'average $C_b$=%.2f' % (sum(cluster_coef_word)/len(cluster_coef_word)), fontsize=30)
+    plt.text(xM/10+xm*9/10, yM*4/5, 'average $C_b$=%.2f' % (sum(cluster_coef_block)/len(cluster_coef_block)), fontsize=30)
     try:
         if Path == '':
-            fig.savefig('cluster_word_' + name + '.' + FORMAT, dpi = 400, format = FORMAT)
+            fig.savefig('cluster_block_' + name + '.' + FORMAT, dpi = 400, format = FORMAT)
             plt.show()
         else:
-            fig.savefig(Path + 'cluster_word_' + name + '.' + FORMAT, dpi=400, format = FORMAT)
+            fig.savefig(Path + 'cluster_block_' + name + '.' + FORMAT, dpi=400, format = FORMAT)
             plt.close()
     except:
         plt.show()
         
-def plot_cluster_syl(name, cluster_syl, FORMAT = 'pdf', Path = ''):
+def plot_cluster_compo(name, cluster_compo, FORMAT = 'pdf', Path = ''):
     '''
-    calculate the local clustering coefficient and cumulative probability of syllagram layer
+    calculate the local clustering coefficient and cumulative probability of component layer
+    
+    ---Input
+    1. name: string
+        name of the plot
+        
+    2. cluster_compo: graph_compo[2]
+        graph_compo is return of build_edge
+        
+    3. FORMAT: string
+        The format of your plot. Most backends support png, pdf, ps, eps and svg. 
+        else: just show plot instead of saving.
+    
+    4. Path: file path for saving picture
+        Default: save at current document
+        if Path == np.nan, no figure will be saved (just show it) 
+        
+    ---Output
+        save or show a figure of local clustering coefficient and cumulative probability of block layer
     '''
 
     fig, ax = plt.subplots()
 
-    cluster_rank_syl = list(cluster_syl)
-    cluster_coef_syl = sorted([cluster_syl[i] for i in cluster_syl], reverse = True)
+    cluster_rank_compo = list(cluster_compo)
+    cluster_coef_compo = sorted([cluster_compo[i] for i in cluster_compo], reverse = True)
     plt.title('Cumulative probability of $C_c$', fontsize = 20)
     plt.xlabel('Local clustering coefficient $C_c$', size = 20)
     plt.ylabel('$P(x|x\leq C_c)$', size = 20)
@@ -147,22 +181,22 @@ def plot_cluster_syl(name, cluster_syl, FORMAT = 'pdf', Path = ''):
     ax.tick_params(axis='y', labelsize=15)
     #https://stackoverflow.com/questions/6774086/why-is-my-xlabel-cut-off-in-my-matplotlib-plot
     plt.gcf().subplots_adjust(left = 0.17, bottom = 0.17)
-    plt.hist(cluster_coef_syl, bins = 20, cumulative=True, density = 1)
+    plt.hist(cluster_coef_compo, bins = 20, cumulative=True, density = 1)
     ym, yM = plt.ylim()
     xm, xM = plt.xlim()
-    plt.text(xM/6+xm*5/6, yM/2, 'average $C_c$=%.2f' % (sum(cluster_coef_syl)/len(cluster_coef_syl)), fontsize=30)
+    plt.text(xM/6+xm*5/6, yM/2, 'average $C_c$=%.2f' % (sum(cluster_coef_compo)/len(cluster_coef_compo)), fontsize=30)
     try:
         if Path == '':
-            fig.savefig('cluster_syl_' + name + '.' + FORMAT, dpi = 400, format = FORMAT)
+            fig.savefig('cluster_compo_' + name + '.' + FORMAT, dpi = 400, format = FORMAT)
             plt.show()
         else:
-            fig.savefig(Path + 'cluster_syl_' + name + '.' + FORMAT, dpi=400, format = FORMAT)
+            fig.savefig(Path + 'cluster_compo_' + name + '.' + FORMAT, dpi=400, format = FORMAT)
             plt.close()
     except:
         plt.show()
 
-def plot_degree_word(name, word_degree_sequence, FORMAT = 'pdf', Path = ''):
-    D = count_frequency(word_degree_sequence)
+def plot_degree_block(name, block_degree_sequence, FORMAT = 'pdf', Path = ''):
+    D = count_frequency(block_degree_sequence)
     #T = ([degree], [degreeFreq]) #we don't fit those points with degree = 0
     T = ([], [])
     for i in D:
@@ -189,17 +223,17 @@ def plot_degree_word(name, word_degree_sequence, FORMAT = 'pdf', Path = ''):
     plt.gcf().subplots_adjust(left = 0.17, bottom = 0.17)
     try:
         if Path == '':
-            fig.savefig('degree_word_' + name + '.' + FORMAT, dpi = 400, format = FORMAT)
+            fig.savefig('degree_block_' + name + '.' + FORMAT, dpi = 400, format = FORMAT)
             plt.show()      
         else:
-            fig.savefig(Path + 'degree_word_' + name + '.' + FORMAT, dpi = 400, format = FORMAT)
+            fig.savefig(Path + 'degree_block_' + name + '.' + FORMAT, dpi = 400, format = FORMAT)
             plt.close()
     except:
         plt.show()
 
-def plot_degree_syl(name, syl_degree_sequence, FORMAT = 'pdf', Path = ''):
+def plot_degree_compo(name, compo_degree_sequence, FORMAT = 'pdf', Path = ''):
     #use MLE to get the fitting parameter, detial read: Curve_Fitting_MLE
-    D = count_frequency(syl_degree_sequence)
+    D = count_frequency(compo_degree_sequence)
     #T = ([degree], [degreeFreq]) #we don't fit those which degree = 0
     T = ([], [])
     for i in D:
@@ -281,10 +315,10 @@ def plot_degree_syl(name, syl_degree_sequence, FORMAT = 'pdf', Path = ''):
     plt.gcf().subplots_adjust(left = 0.17, bottom = 0.17)
     try:
         if Path == '':
-            fig.savefig('degree_syl_' + name + '.' + FORMAT, dpi = 400, format = FORMAT)
+            fig.savefig('degree_compo_' + name + '.' + FORMAT, dpi = 400, format = FORMAT)
             plt.show()      
         else:
-            fig.savefig(Path + 'degree_syl_' + name + '.' + FORMAT, dpi = 400, format = FORMAT)
+            fig.savefig(Path + 'degree_compo_' + name + '.' + FORMAT, dpi = 400, format = FORMAT)
             plt.close()
     except:
         plt.show()        

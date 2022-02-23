@@ -8,9 +8,10 @@ This module is used to construct a dataframe with all information we need.
 The core function of this module is info()
 
 The main quests are 
-1. construct Book and generate fake corpora
+1. construct Book
 2. build FRD, RRD, {V_m} and {H_n}
 3. count distribution of N syllagrams
+4. save data
 """
 
 import pandas as pd
@@ -31,21 +32,31 @@ def read_file(filename, encode = 'UTF-8'):
     return a list of the words of text in the file; ignore punctuations.
     also returns the longest word length in the file.
     
-    paras:
-    --------
-    file_name : string
-      XXX.txt. We suggest you using the form that set 
-      name = 'XXX' 
-      and 
-      filename = name + '.txt'.
+    ---Input
+        a txt file with 'encode' encoding
+    
+    ---Parameters
+    1. file_name : string
+          XXX.txt. We suggest you using the form that set 
+          name = 'XXX' 
+          and 
+          filename = name + '.txt'.
 
-    encode : encoding of your txt
+    2. encode : encoding of your txt
+    
+    ---Return
+    1. word_list: array
+        a list of words in the txt file
+        
+    2. longest: int
+        max number of syllagrams in a word
+        
     """
     punctuation_set = set(u'''_—＄％＃＆:#$&!),.:;?]}¢'"、。〉》」』】〕〗〞︰︱︳﹐､﹒
     ﹔﹕﹖﹗﹚﹜﹞！），．：；？｜｝︴︶︸︺︼︾﹀﹂﹄﹏､～￠
     々‖•·ˇˉ－―--′’”([{£¥'"‵〈《「『【〔〖（［｛￡￥〝︵︷︹︻
     ︽︿﹁﹃﹙﹛﹝（｛“‘-—_…''')
-    num = 0
+    longest = 0
     word_list = []
     with open(filename, "r", encoding = encode) as file:
         for line in file:
@@ -57,41 +68,48 @@ def read_file(filename, encode = 'UTF-8'):
                         new_word = new_word + c
                 if not len(new_word) == 0: 
                     word_list.append(word)
-                    if len(word.split('-')) > num:
-                        num = len(word.split('-')) #max number of syllagrams in a word
+                    if len(word.split('-')) > longest:
+                        longest = len(word.split('-')) #max number of syllagrams in a word
                     
     if '\ufeff' in word_list:
         word_list.remove('\ufeff')
         
     print("read file successfully!")
-    return word_list, num
+    return word_list, longest
 
 def read_Ngram_file(filename, N, encode = 'UTF-8'):
     """
-    Read the text file with the given filename;    return a list of the words of text in the file; ignore punctuations.
+    Read the text file with the given filename;    
+    return a list of the words of text in the file; ignore punctuations.
     also returns the longest word length in the file.
     
-    paras:
-    --------
-    file_name : string
+    ---Parameters
+    1. file_name : string
       XXX.txt. We suggest you using the form that set 
       name = 'XXX' 
       and 
       filename = name + '.txt'.
         
-    N: int
+    2. N: int
       "N"-gram. 
       For example : a string, ABCDEFG (In Chinese, you don't know what's the 'words' of a string)
       in 2-gram = [AB, CD, EF, G];
       in 3-gram = [ABC, DEF, G];
       in 4-gram = [ABCD, EFG]
       
-      two word compose a txt 'ABCDE EFGHI' (This case happended in English corpus)
+      two words are in a txt 'ABCDE EFGHI' (This case happended in English corpus)
       in 2-gram = [AB, CD, E, EF, GH, I];
       in 3-gram = [ABC, DE, EFG, HI];
       in 4-gram = [ABCD, E, EFGH, I]
     
-    encode : encoding of your txt
+    3. encode : encoding of your txt
+    
+    ---Return
+    1. word_list: array
+        a list of words in the txt file
+        
+    2. N: int
+        N-gram
     """
     punctuation_set = set(u'''_—＄％＃＆:#$&!),.:;?]}¢'"、。〉》」』】〕〗〞︰︱︳﹐､﹒
     ﹔﹕﹖﹗﹚﹜﹞！），．：；？｜｝︴︶︸︺︼︾﹀﹂﹄﹏､～￠
@@ -129,51 +147,63 @@ def read_Ngram_file(filename, N, encode = 'UTF-8'):
     return word_list, N
 
 
-def count_frequency(word_list):
-    """
-    Input: 
-        word_list: list
+def count_frequency(unit_list):
+    """count the frequency of occurrence for unit in unit_list
+    
+    ---Input 
+        unit_list: list
             a list containing words or syllagrams
-    Return: 
+        
+    ---Return: 
         D: set
             a dictionary mapping words to frequency.
     """
     D = {}
-    for new_word in word_list:
-        if new_word in D:
-            D[new_word] = D[new_word] + 1
+    for new_unit in unit_list:
+        if new_unit in D:
+            D[new_unit] = D[new_unit] + 1
         else:
-            D[new_word] = 1
+            D[new_unit] = 1
     return D   
 
 
-def decide_seq_order(word_list):
-    """
-    Input:
-        word_list: list
-            a list containing words or syllagrams
-    Return: 
-        D: set
-            a dictionary mapping each word to its sequential number, which is decided by the order it 
-            first appears in the word_list.
-        another_list: list
-            a list containg non-repetitive words, each in the order it first appears in word_list.
+def decide_seq_order(unit_list):
+    """generate the seqence of order of units in unit_list
+    
+    ---Input
+        unit_list: list
+            unit = word or syllagram
+            a list containing units
+
+    ---Return 
+    1. D: set
+        a dictionary mapping each unit to its sequential number, 
+        which is decided by the order of first appearence in the unit_list.
+        
+    2. another_list: list
+        a list containg non-repetitive words obeys the order of first appearence in the unit_list
     """
     D = {}
     another_list = []
-    for word in word_list:
-        if word not in another_list:
-            another_list.append(word)
-    for num in range(len(another_list)):
-        D[another_list[num]] = num + 1
+    num = 0
+    
+    for unit in unit_list:
+        if unit not in another_list:
+            another_list.append(unit)
+            D[another_list[num]] = num + 1
+            num += 1
     
     return D, another_list
 
 
 def transfrom_wordlist_into_syllist(word_list):
-    """Divide each words in the word_list into syllagrams, order reserved.
-    Input: a list containing words
-    Return: a list containg syl 
+    """Divide each word in the word_list into syllagrams, order preserved
+    
+    ---Input
+        a list contains words
+    
+    ---Return
+        a list contains syllagrams
     """
     syl_list = []
     for word in word_list:
@@ -184,24 +214,25 @@ def transfrom_wordlist_into_syllist(word_list):
 '''
 def transfrom_wordlist_into_Ngram_syllist(word_list, N):
     """Divide each words in the word_list into N-gram syllagrams, order reserved.
+    
     -------Input: 
-    word_list:
+    1. word_list:
       a list containing words
     
-    N: int
+    2. N: int
       "N"-gram. 
       For example : a string, ABCDEFG (In Chinese, you don't know what's the 'words' of a string)
       in 2-gram = [AB, CD, EF, G];
       in 3-gram = [ABC, DEF, G];
       in 4-gram = [ABCD, EFG]
       
-      two word compose a txt 'ABCDE EFGHI' (This case happended in English corpus)
+      two words are in a txt 'ABCDE EFGHI' (This case happended in English corpus)
       in 2-gram = [AB, CD, E, EF, GH, I];
       in 3-gram = [ABC, DE, EFG, HI];
       in 4-gram = [ABCD, E, EFGH, I]
     
     -------Return:
-    a list containg syl 
+        a list containg syl 
     """
     syl_list = []
     for word in word_list:
@@ -211,24 +242,48 @@ def transfrom_wordlist_into_Ngram_syllist(word_list, N):
     return syl_list
 '''
 
-def produce_data_frame(word_list, word_freq, word_seq, varibleTitle):
-    word_list = list(set(word_list))
-    data = {}
-    word_seq_list = []
-    word_freq_list = []
+def produce_data_frame(unit_list, unit_freq, unit_seq, varibleTitle):
+    '''produce pandas dataframe
     
-    for word in word_list:
-        word_freq_list.append(word_freq[word])
-        word_seq_list.append(word_seq[word])
+    ---Input
+    unit denotes word or syllagram 
+    
+    1. unit_list: list
+        return of read_file() or transfrom_wordlist_into_syllist()
+    
+    2. unit_freq: set
+        return of count_frequency()
+    
+    3. unit_seq: set
+        return of decide_seq_order()
+    
+    ---Parameters
+        varibleTitle: string
+            the title name of column in dataframe
+    
+    ---Return
+        dataframe: pandas.DataFrame
+            a dataframe contains unit_list, unit_freq, and unit_seq
+    '''
+    
+    
+    unit_list = list(set(unit_list))
+    data = {}
+    unit_seq_list = []
+    unit_freq_list = []
+    
+    for unit in unit_list:
+        unit_freq_list.append(unit_freq[unit])
+        unit_seq_list.append(unit_seq[unit])
     
     first = varibleTitle 
     second = varibleTitle + "SeqOrder"
     third = varibleTitle + "Freq"
     forth = varibleTitle + "Rank"
     
-    data[first] = word_list
-    data[second] = word_seq_list
-    data[third] = word_freq_list  
+    data[first] = unit_list
+    data[second] = unit_seq_list
+    data[third] = unit_freq_list  
     
     dataFrame = pd.DataFrame(data)
     dataFrame = dataFrame.sort_values([third, second],ascending = [False,True])
@@ -240,7 +295,28 @@ def produce_data_frame(word_list, word_freq, word_seq, varibleTitle):
     return dataFrame
 
 
-def produce_wordRank_sylRank_frame(pd_word,pd_syl,longest):
+def produce_wordRank_sylRank_frame(pd_word, pd_syl, longest):
+    '''merge pd_word and pd_syl into a large dataframe
+    
+    ---Input
+    1. pd_word: pandas.DataFrame
+        return of produce_data_frame(unit = word)
+    
+    2. pd_syl: pandas.DataFrame
+        return of produce_data_frame(unit = syllagram)
+    
+    3. longest: int
+        return of read_file
+        
+    ---Return
+        pd_word: pandas.DataFrame
+            a large dataframe contains information of words and its syllagrams
+            Ex: for 'ap-ple'
+                1th_syl = ap
+                2th_syl = ple
+    
+    '''
+    
     
     D = {}
     
@@ -278,34 +354,33 @@ def produce_wordRank_sylRank_frame(pd_word,pd_syl,longest):
 
 def info(file_name, encode = "UTF-8"):
     '''the core function that give you statistical data, including
-    1. a dataframe contain words and their all compositions (big)
+    1. a dataframe contains words and their all syllagrams (big)
     2. the frequency information of syllagrams (syl) and words (word)
     3. the longest length of single word (longest)
         
-    paras:
-    --------
+    ---Parameters
     1. file_name : string, it must be like XXX.txt
       We suggest you using the form that set 
-      name = 'XXX' 
-      and 
-      filename = name + '.txt'.
+      name = 'XXX' and filename = name + '.txt'.
     
     2. encode : encoding of your txt
     
     
-    return:
-    --------
-    1. data_frame: pd.dataframe
-      a big data frame contain the information of words and its compositition
-    2. pd_syl: pd.dataframe
-      a data frame contain the frequency information of syllagrams
-    3. another_word: pd.dataframe
-      a data frame contain the frequency information of words
+    ---Return
+    1. data_frame: pandas.DataFrame
+      a big data frame contains the information of words and its syllagrams
+      
+    2. pd_syl: pandas.DataFrame
+      a data frame contains the frequency information of syllagrams
+      
+    3. another_word: pandas.DataFrame
+      a data frame contains the frequency information of words
+      
     4. longest_L: int
       the biggest length of single word.
     
     '''
-    L, longest_L = read_file(file_name,encode)
+    L, longest_L = read_file(file_name, encode)
     word_freq = count_frequency(L)
     print("Successfully count word freqency!" + "(%s)" % file_name)
     
@@ -326,38 +401,37 @@ def info(file_name, encode = "UTF-8"):
 def N_gram_info(file_name, N, encode = "UTF-8"):
     '''This is only used to analysis N-gram words.
         
-    paras:
-    --------
-    file_name : string
+    ---Parameters
+    1. file_name : string
       XXX.txt. We suggest you using the form that set 
-      name = 'XXX' 
-      and 
-      filename = name + '.txt'.
+      name = 'XXX' and filename = name + '.txt'.
         
-    N: int
+    2. N: int
       "N"-gram. 
       For example : a string, ABCDEFG (In Chinese, you don't know what's the 'words' of a string)
       in 2-gram = [AB, CD, EF, G];
       in 3-gram = [ABC, DEF, G];
       in 4-gram = [ABCD, EFG]
       
-      two word compose a txt 'ABCDE EFGHI' (This case happended in English corpus)
+      two words are in a txt 'ABCDE EFGHI' (This case happended in English corpus)
       in 2-gram = [AB, CD, E, EF, GH, I];
       in 3-gram = [ABC, DE, EFG, HI];
       in 4-gram = [ABCD, E, EFGH, I]
     
-    encode : encoding of your txt
+    3. encode : encoding of your txt
     
     
-    return:
-    --------
-    data_frame: pd.dataframe
-      a big data frame contain the information of words and its compositition
-    pd_syl: pd.dataframe
-      a data frame contain the information of syllagrams
-    another_word: pd.dataframe
+    ---Return
+    1. data_frame: pandas.DataFrame
+      a big data frame contains the information of words and its syllagrams
+      
+    2. pd_syl: pandas.DataFrame
+      a data frame contains the information of syllagrams
+    
+    3. another_word: pandas.DataFrame
       a data frame contain the information of words
-    longest_L: int
+      
+    4. longest_L: int
       the biggest length of single word.
     
     '''
@@ -380,28 +454,46 @@ def N_gram_info(file_name, N, encode = "UTF-8"):
     return data_frame, pd_syl, another_word, longest_L    
 
 def write_to_excel(big, word, syl, name):
-    """Write pandas dataFrame big, word, syl to an excel file with the given filename
+    """Save pandas dataFrame big, word, and syl as an excel file with the given filename
+    
+    ---Input
+    big, word, syl: pandas.DataFrame
+        Return of info()
+    
+    
+    
+    ---Parameters
+    name: string
+        the name of excel file
+    
+    ---Output
+        an excel file contains big, word, and syl
+    
     """
     writer = pd.ExcelWriter(name + '.xlsx')
-    big.to_excel(writer,'RRD')
-    word.to_excel(writer,'word')
-    syl.to_excel(writer,'syllagram')
+    big.to_excel(writer, 'RRD')
+    word.to_excel(writer, 'word')
+    syl.to_excel(writer, 'syllagram')
     writer.save()
+    
+def save_parameter(filename, data):
+    f = open(filename, 'a', encoding='utf-8')
+    f.write(data)
+    f.close()
 
 
 def geometric_sequence(word, syl):
     '''give geometric sequence {Hn} and {Vm}
     
-    paras:
-    ---
-    word, syl: pandas.DataFrame
-        the output of info    
-    
-    returns:
-    ---
-    H: ndarray
+    ---Parameters
+        word, syl: pandas.DataFrame
+            the output of info ()   
+
+    ---Returns
+    1. H: ndarray
         the geometric sequence of horizontal lines
-    V: ndarray
+        
+    2. V: ndarray
         the sequence of vertical lines
       
     '''
@@ -436,31 +528,37 @@ def geometric_sequence(word, syl):
 def draw_RRD_plot(big, word, syl, longest, name, V, H, need_line = 'Y', number_of_lines = 4, Color = '#ff0000', FORMAT = 'png', Path = ''):
     '''draw the RRD plot and auxiliary lines
     
-    Controllable parameters:
-    --- 
-    need_line: string
-        If you don't want the auxiliary lines, change Y into other thing.
-
-    number_of_lines: number
-        How many auxiliary lines you need ? (both horizontal and vertical lines)
-    Color: colorcode
-    FORMAT: string
-        The format of your RRD plot. Most backends support png, pdf, ps, eps and svg. 
-        else: just show plot instead of saving.
-    Path: file path for saving picture
-        Default: save at current document
+    ---Input
+    1. big, word, syl, longest: pandas.DataFrame
+        the return of info()
     
-    Fixed parameters:
-    ---(please don't change them)
-    big, word, syl, longest: pandas.DataFrame
-        the output of the function info()
-    H, V: ndarray
-        the output of the function check_const_ratio
+    2. H, V: ndarray
+        the return of geometric_sequence()
+    
+    ---Parameters
+    1. need_line: string
+        If you don't want the auxiliary lines, change Y into other strings.
+
+    2. number_of_lines: int
+        the number of auxiliary lines (both horizontal and vertical lines)
+    
+    3. Color: colorcode
+        the color of points on RRD
+    
+    4. FORMAT: string
+        The format of your plot. Most backends support png, pdf, ps, eps and svg. 
+        else: just show plot instead of saving.
+    
+    5. Path: file path for saving picture
+        Default: save at current document
+        if Path == np.nan, no figure will be saved (just show it)
+    
+    ---Return
+        coordinate: N*2 array, N = number of points
+            coordinate[i][0] = x coordinate, coordinate[i][1] = y coordinate
            
-    output:
-        1. show or save a RRD plot
-        2. coordinate: N*2 array, N = number of points
-                coordinate[i][0] = x coordinate, coordinate[i][1] = y coordinate
+    ---Output
+        show or save a RRD plot
             
     '''
     fig, ax = plt.subplots()   
@@ -518,23 +616,28 @@ def draw_RRD_plot(big, word, syl, longest, name, V, H, need_line = 'Y', number_o
     return coordinate
     
 def N_syl_dist(name, big, longest, FORMAT = 'png', Path = ''):
-    '''N-syl means there are N syllagrams in one word, it can be 1, 2, 3..., etc. This function can print their distribution
+    '''N-syl means there are N syllagrams in one word, it can be 1, 2, 3..., etc. 
+    This function can plot their distribution
     
-    Controllable parameters:
-    --- 
-    name: str
+    ---parameters
+    1. name: string
        "XXX" (your file name without filename extension)
-    FORMAT: string
-        The format of your N-syl plot. Most backends support png, pdf, ps, eps and svg.
     
-    Fixed parameters:
-    ---(please don't change them)
-    big, longest: pandas.DataFrame, int
-        the output of the function info()
+    2. FORMAT: string
+        The format of your plot. Most backends support png, pdf, ps, eps and svg. 
+        else: just show plot instead of saving.
     
-    Output:
-    ---
-        a N-syl distribution plot
+    3. Path: file path for saving picture
+        Default: save at current document
+        if Path == np.nan, no figure will be saved (just show it)
+    
+    ---Input
+        big, longest: pandas.DataFrame, int
+            the output of the function info()
+            where big = info()[0] and longest = info()[3]
+    
+    ---Output
+        show or save a N-syl distribution plot
     
     '''
     N_syl = big["N_syl"]
@@ -563,7 +666,7 @@ def N_syl_dist(name, big, longest, FORMAT = 'png', Path = ''):
 def which_plot(name, V, H, x = 'H', max_range = 50, shift = 'N', FORMAT = 'png', Path = ''):
     '''check ratio of geometric sequence {Hn} or {Vm}
 
-       parameters:
+    ---Parameters
     1. name: str
        "XXX" (your file name without filename extension)
 
@@ -579,7 +682,20 @@ def which_plot(name, V, H, x = 'H', max_range = 50, shift = 'N', FORMAT = 'png',
     4. x: 'H' or 'V'
         you can chose the sequence you want (H/V)
 
-    5. FORMAT: png, pdf, ps, eps and svg
+    5. FORMAT: string
+        The format of your plot. Most backends support png, pdf, ps, eps and svg. 
+        else: just show plot instead of saving.
+    
+    6. Path: file path for saving picture
+        Default: save at current document
+        if Path == np.nan, no figure will be saved (just show it)
+        
+    ---Output
+        a figure of {H_n}, or {V_m}, depend on the x = 'H' or 'V'
+    
+    ---Return
+        mean, standard error, and shift: float
+            statistical quantities of the ratio of {H} or {V}
     '''
     
     if x == 'H':
@@ -708,7 +824,7 @@ def which_plot(name, V, H, x = 'H', max_range = 50, shift = 'N', FORMAT = 'png',
 def FRD_plot(name, word, syl, x_pos = 2, y_pos = 10, FORMAT = 'png', Path = ''):
     '''draw FRD plot of words and syllagrams
 
-       parameters:
+    ---Parameters
     1. name: str
        "XXX" (your file name without filename extension)
 
@@ -721,14 +837,18 @@ def FRD_plot(name, word, syl, x_pos = 2, y_pos = 10, FORMAT = 'png', Path = ''):
        (x_position, y_position) of your formula on FRD plot
 
     4. FORMAT: string
-        The format of your RRD plot. Most backends support png, pdf, ps, eps and svg. 
+        The format of your plot. Most backends support png, pdf, ps, eps and svg. 
         else: just show plot instead of saving.
     
     5. Path: file path for saving picture
         Default: save at current document
+        if Path == np.nan, no figure will be saved (just show it)
     
-        output:
-    (C, s): normalized coeffecient and exponent for P(x)=Cx^s
+    ---Output
+        save or show a figure of FRD
+    
+    ---Return:
+        (C, s): normalized coeffecient and exponent of P(x) = C * x^s
     '''
     wf = word['wordFreq']
     cf = syl['sylFreq']
@@ -798,7 +918,7 @@ def FRD_plot(name, word, syl, x_pos = 2, y_pos = 10, FORMAT = 'png', Path = ''):
     return (C, s)
 
 def draw_density_plot(cooridnate_x, cooridnate_y, slice_number):
-    """input cooridnate of datapoints
+    """Input cooridnate of datapoints
        draw a density diagram and slice it into slice_number pieces. 
     """
     xx = cooridnate_x

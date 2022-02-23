@@ -26,22 +26,24 @@ def choose_point(m, n, V, H, big, longest):
     {m, n} rectangle denotes those points whose x in (V_m+1, V_m] while y in (H_n+1, H_n]
     See Eq. (3) in SI
     
-    ---parameters
-    1. m, n: int
-       m, n >= 1
-    2. V, H: list or np.array
-       V and H are the coordinates of the sequence {V} and {H}.
-       You should get these two from 
-             V, H = geometric_sequence(word, syl)
-       where geometric_sequence(word, syl) is the function of count.py
+    ---Parameters
+        m, n: int
+            m, n >= 1
+    
+    ---Input
+    1. V, H: list or np.array
+        V and H are the coordinates of the sequence {V} and {H}.
+        You should get these two from V, H = geometric_sequence(word, syl)
+        see count.py for details
 
-    3. big, longest: pandas.DataFrame, int
-        the output of the function info()    
+    2. big, longest: pandas.DataFrame, int
+        the return of  info()
+        see count.py for details
     
-    ---return
-    points = [[(x_m,y_n),...], [(x_(m+1), y_(n+1)),...], ...]
+    ---Return
+        points = [[(x_m,y_n),...], [(x_(m+1), y_(n+1)),...], ...]
     
-    ps: in each {m, n} = [(x_m,y_n),...], the points are sorted according to their x values (big to small)
+        ps: in each {m, n} = [(x_m,y_n),...], the points are sorted according to their x values (big to small)
     '''
     num_rect = min(len(V) - m, len(H) - n) #total number of chosen rectangle
     points = [[] for i in range(num_rect)]
@@ -61,58 +63,35 @@ def choose_point(m, n, V, H, big, longest):
     
     return points
 
-def sep_point(m, n, points):
-    '''To plot, we need to separate x and y value of choose_point()
-    In order words, the list [[(x_1,y_1),...]_(m,n), [(x_1,y_1),...]_(m+1,n+1), ...] will become
-    px = [x_m, ..., x_(m+1), ...] and py = [y_n, ..., y_(n+1), ...] after using sep_point
-    
-    ---parameters
-    1. m, n: int
-        the same as m, n in choose_point()
-    2. points: array
-        output of choose_point(), namely [[(x_1,y_1),...]_(m,n), [(x_1,y_1),...]_(m+1,n+1), ...]
-
-    
-    ---return
-    1. px: 
-        [x_m, ..., x_(m+1), ...]
-    2. py: 
-        [y_n, ..., y_(n+1), ...]
-    '''
-    
-    
-    px = []
-    py = []
-    for i in range(5): #{m,n} ,..., {m+4, n+4} 
-        if points[i] == []:
-            print ('the (%d, %d) block have no point.' % (i+m, i+n))
-            continue
-        for j in points[i]:
-            px.append(j[0])
-            py.append(j[1])
-    return px, py
-
 def left_upper(m, n, V, H, points, num_section, delta, percent):
     '''select points located in upper envelope of each rectangles. 
     See appendix of SI to gain theortical detail of this function.
     
-    ---parameters
+    ---Input
     1. m, n: int
         the same as m, n in choose_point()
+        
     2. points: array
         output of choose_point(), namely [[(x_1,y_1),...]_(m,n), [(x_1,y_1),...]_(m+1,n+1), ...]
-    3. num_section: int, default = 3
+    
+    ---Parameters
+    1. num_section: int, default = 2
+        see left_upper() for details
         didive each rectangle in num_section parts to examine the local cocavity and convexity
-        NOTICE: increase this number will slow down the speed of de-noising algorithm
-    4. delta: float, >= 0
+        
+        NOTICE: increase this number will slow down the speed of de-noising algorithm, 
+                but enhance the ability of detecting local convexity and concavity of envelope
+        
+    2. delta: float, >= 0
         see inner functions > f_cave for explaination
-    5. percent: float
+        
+    3. percent: float
         see inner functions > local_con for explaination
         
-    ---return
-    lup = [[(lux_m,luy_n),...], [(lux_(m+1), luy_(n+1)),...], ...] after left_upper
+    ---Return
+        lup = [[(lux_m,luy_n),...], [(lux_(m+1), luy_(n+1)),...], ...] after left_upper
     
-    lup denotes "left upper point"
+        lup denotes "left upper point"
     '''
     #-------inner functions
     def y_diag(i, x):
@@ -230,27 +209,62 @@ def left_upper(m, n, V, H, points, num_section, delta, percent):
         
     return lup
 
+def sep_point(m, n, points):
+    '''To plot, we need to separate x and y value of choose_point() or left_upper()
+    In order words, the list [[(x_1,y_1),...]_(m,n), [(x_1,y_1),...]_(m+1,n+1), ...] will become
+    px = [x_m, ..., x_(m+1), ...] and py = [y_n, ..., y_(n+1), ...] after using sep_point()
+    
+    ---Input
+    1. m, n: int
+        the same as m, n in choose_point() or left_upper()
+        
+    2. points: array
+        return of choose_point() or left_upper()
+        namely [[(x_1,y_1),...]_(m,n), [(x_1,y_1),...]_(m+1,n+1), ...]
+
+    
+    ---Return
+    1. px: 
+        [x_m, ..., x_(m+1), ...]
+        
+    2. py: 
+        [y_n, ..., y_(n+1), ...]
+    '''
+    
+    px = []
+    py = []
+    for i in range(5): #{m,n} ,..., {m+4, n+4} 
+        if points[i] == []:
+            print ('the (%d, %d) block have no point.' % (i+m, i+n))
+            continue
+        for j in points[i]:
+            px.append(j[0])
+            py.append(j[1])
+    return px, py
+
 def Tv(r, p):
     '''
-    ---parameters
-    r: ndarray
-    data points after denosing, where r = [rx1, rx2, ..., rxn, ry1, ry2, ..., ryn]
-    p: ndarray
-    data with noise, where p = [x1, x2, ..., xn, y1, y2, ..., yn]
+    ---Input
+    1. r: ndarray
+        data points after denosing, where r = [rx1, rx2, ..., rxn, ry1, ry2, ..., ryn]
     
-    ---output
-    a function used to denoise
+    2. p: ndarray
+        data with noise, where p = [x1, x2, ..., xn, y1, y2, ..., yn]
+    
+    ---Return
+        a function used to denoise
     '''
-    def penalty(D, D_0 = 50):
+    def penalty(D, D_0):
         #This penalty function is used to lower the influence of outliers
         #see book: https://web.stanford.edu/~boyd/cvxbook/bv_cvxbook.pdf
         if abs(D) <= D_0:
             return D ** 2
         elif abs(D) > D_0:
-            return D * (2 * abs(D) - D_0)
+            return D_0 * (2 * abs(D) - D_0)
     t = 0
+    D_0 = 50
     for i in range(len(p)):
-        t = t + penalty(r[i] - p[i], 50)
+        t = t + penalty(r[i] - p[i], D_0)
     
     #see taxicab distance
     Lambda = 1 #regularziation parameters
@@ -260,27 +274,42 @@ def Tv(r, p):
 def DENOISE(m, n, V, H, points, toler = 50, num_section = 2, delta = 0.15, percent = 0.05):
     '''chose left_upper part in each rectangle and denoise them via Tv.
     
-    ---input
+    ---Input
     1. m, n: int
         the same as m, n in choose_point()
-    2. points: array
-        output of choose_point(), namely [[(x_1,y_1),...]_(m,n), [(x_1,y_1),...]_(m+1,n+1), ...]
-    3. toler: number, default = 50
+        
+    2. V, H: list or np.array
+        V and H are the coordinates of the sequence {V} and {H}.
+        You should get these two from 
+             V, H = geometric_sequence(word, syl)
+        see count.py for details
+    
+    3. points: array
+        return of choose_point(), namely [[(x_1,y_1),...]_(m,n), [(x_1,y_1),...]_(m+1,n+1), ...]
+    
+    ---Parameters
+    1. toler: number, default = 50
         control the tolerance of minimize(Tv)
-    4. num_section: int, default = 3
+        
+    2. num_section: int, default = 2
         see left_upper() for details
         didive each rectangle in num_section parts to examine the local cocavity and convexity
-        NOTICE: increase this number will slow down the speed of de-noising algorithm
-    5. delta: float, >= 0
+        
+        NOTICE: increase this number will slow down the speed of de-noising algorithm, 
+                but enhance the ability of detecting local convexity and concavity of envelope
+        
+    3. delta: float, >= 0
         affect the tolerance of left_upper()
         see left_upper() > inner functions > f_cave for explaination
-    6. percent: float
+        
+    4. percent: float
         affect the tolerance of left_upper()
         see left_upper() > inner functions > local_con for explaination
     
-    ---output
+    ---Return
     1. luptx: 1D array
-        array of x coordinate for (m,n)~(m+5,n+5) after denoising 
+        array of x coordinate for (m,n)~(m+5,n+5) after denoising
+        
     2. lupty: 1D array
         array of y coordinate for (m,n)~(m+5,n+5) after denoising
     '''
@@ -296,14 +325,20 @@ def DENOISE(m, n, V, H, points, toler = 50, num_section = 2, delta = 0.15, perce
 def coarse_grain(px, py, Range, num_part = 50):
     '''use coarse-grain on (px,py), ruturn p_avg
     
-    ---input
-    px, py: 1-D list
-    Range: the x-range of data points
-    num_part: number of window, i.e. divide pi into num_part parts. 
-              the window = (max(Range)-min(Range))/num_part
+    ---Input
+    1. px, py: 1-D list
+        return of DENOISE()
     
-    ---return
-    p_avg: (px,py) after coarse-grain
+    2. Range: [x_min, x_max] or (x_min, x_max)
+        the x-range of data points
+    
+    3. num_part: int
+        number of window, i.e. divide pi into num_part parts. 
+        the window = (max(Range)-min(Range))/num_part
+    
+    ---Return
+        x_avg, y_avg: 1D-list
+            px, py after coarse-grain
     '''
     window = (max(Range) - min(Range))/num_part
     px_avg = [[] for i in range(num_part)]
@@ -330,30 +365,53 @@ def coarse_grain(px, py, Range, num_part = 50):
 
 def plot_g(L, V, H, big, name, longest, toler = 50, num_part = 50, num_section = 2, delta = 0.15, percent = 0.05):
     '''
-    ---input
-    1. L: integer, 
-        this function will select points on scaling line from g_1 to g_L
-    2. toler: float, 
-        tolerance. Increase this value will speed up the minimization process but decline in performance.
+    ---Input
+    1. V, H: list or np.array
+        V and H are the coordinates of the sequence {V} and {H}.
+        You should get these two from 
+             V, H = geometric_sequence(word, syl)
+        see count.py for details
+    
+    2. big, longest: pandas.DataFrame, int
+        the return of  info()
+        see count.py for details
+        
+    3. name: string
+        name of txt file (raw data)
+    
+    ---Parameters
+    1. L: int
+        number of scaling line you want to denoise, from g_1 to g_L
+        
+    2. toler: float 
+        tolerance. 
+        
+        NOTICE: increase this value will speed up the minimization process but decline in performance.
+        
     3. num_part: int
         number of windows (num_part parts) that are used to doing coarse-grain.
+        
     4. num_section: int, default = 2
         see left_upper() for details
         didive each rectangle in num_section parts to examine the local cocavity and convexity
-        NOTICE: increase this number will slow down the speed of de-noising algorithm
+        
+        NOTICE: increase this number will slow down the speed of de-noising algorithm, 
+                but enhance the ability of detecting local convexity and concavity of envelope
+        
     5. delta: float, >= 0
         affect the tolerance of left_upper()
         see left_upper() > inner functions > f_cave for explaination
+        
     6. percent: float
         affect the tolerance of left_upper()
         see left_upper() > inner functions > local_con for explaination
         
     
-    ---return
-    g: set, {g_1, g_2,...,g_L}, where g_k = (x_avg, y_avg) denote the points after coarse-grain
-    glu: set, {glu_1, glu_2,...,glu_L}, where glu_k = (lupx, lupy)_k denote the points on scaling line g_k
-    
-    ps. lu means left upper
+    ---Return
+        g: set, {g_1, g_2,...,g_L}, where g_k = (x_avg, y_avg) denote the points after coarse-grain
+        glu: set, {glu_1, glu_2,...,glu_L}, where glu_k = (lupx, lupy)_k denote the points on scaling line g_k
+
+        ps. lu means left upper
     '''
     #-----------------------------plot horizontal and vertical lines
     Slice_number = 50 #this value decide the number of points on horizontal and vertical lines
@@ -397,30 +455,37 @@ def plot_g(L, V, H, big, name, longest, toler = 50, num_part = 50, num_section =
 def rg(name, g, FORMAT, Path = ''):
     '''plot r_g of your data
     
-    ---parameters
+    ---Input
+        g: set 
+           contain points on g1 ~ gL after coarse-grain
+           output of plot_g(L, V, H) 
+           
+           #PS: use g (coarse-grain data), not glu (original data)
+    
+    ---Parameters
     1. name: str
-       name of your r_g plot
-    2. g: set, contain points on g1 ~ gL after coarse-grain
-       output of plot_g(L, V, H) 
-       #PS: use g (coarse-grain data), not glu (original data)
-    3. FORMAT: string
-       The format of your RRD plot. Most backends support png, pdf, ps, eps and svg. 
-       else: just show plot instead of saving.
-    
-    4. Path: file path for saving picture
-       Default: save at current document
+        name of your r_g plot
        
-    ---output
-    figure including information about R and error
+    2. FORMAT: string
+        The format of your plot. Most backends support png, pdf, ps, eps and svg. 
+        else: just show plot instead of saving.
     
-    ---return
-    3-D tuple Rg, where
-    Rg[0] = R: avg of g_(k+1)/g_k for all k
-    Rg[1] = error: standard error for g_(k+1)/g_k
-    Rg[2] = R_dist: record g_(k+1)/g_k for every x withour NAN
+    3. Path: file path for saving picture
+        Default: save at current document
+        if Path == np.nan, no figure will be saved (just show it)
+       
+    ---Output
+        figure including information about R and error
     
-    Rg[0] and Rg[1] are used to calculate SC value, 
-    while Rg[2] can conut the distribution of r_g (for future researches, such as error distribution)
+    ---Return
+        Rg = (R, ERROR, R_dist), a 3-D tuple
+            where
+            Rg[0] = R: avg of g_(k+1)/g_k for all k
+            Rg[1] = error: standard error for g_(k+1)/g_k
+            Rg[2] = R_dist: record g_(k+1)/g_k for every x withour NAN
+
+            Rg[0] and Rg[1] are used to calculate SC value, 
+            while Rg[2] can conut the distribution of r_g (for future researches, such as error distribution)
     '''
     num_part = max([len(g[i][0]) for i in g])
     len_g = len(g)
@@ -451,7 +516,7 @@ def rg(name, g, FORMAT, Path = ''):
     del weight['g2/g1'], r['g2/g1']
     tot = sum([weight[w] for w in weight])
     R = sum([weight[i]*r[i]/tot for i in weight])
-    ERROR = (sum([weight[i]*error[i]**2/tot for i in weight]))**0.5
+    ERROR = (sum([weight[i]*error[i]**2/tot for i in weight]))**0.5 #error propagation
     EE = (sum([weight[i]*error[i]/tot for i in weight]))
     
     
@@ -515,6 +580,7 @@ def scaling_fit(data, Rg_0, V, H, Zipf, name, FORMAT = 'pdf', Path = ''):
     '''find out best fitting curve for scaling lines
     use fun to be fitting model, select g1~gN to be basis of scaling function, after that find out the best basis and parameters
     by check deviation of different basis.
+    
     ### Notice: we don't use g1 as basis, and exclude g1 when calculate deviation
     For instance, use g2 to be basis
     0. fitting g2 with fun
@@ -523,21 +589,40 @@ def scaling_fit(data, Rg_0, V, H, Zipf, name, FORMAT = 'pdf', Path = ''):
     3. check all possible and resonable basis, findout the smallest tot_Dev['gk'] 
     4. calculate fitting score, base on an empirical truth that good fitting use less data
     
-    ---parameters
+    ---Input
     1. data: set, the output that comes form plot_g(). It can be g or glu
         It is the set of points on scaling lines 
         #PS: I suggest use glu (original data), not g (coarse-grain data)
+        
     2. Rg_0: mean ratio of scaling curve
         It is 0th element of Rg = rg(), i.e., Rg_0 = Rg[0]
         Instead of Rg_0, you can try RH_0 = RH[0] (but fitting performance is bad)
         where RH = which_plot(), RH[0] = mean, RH[1] = std, and RH[2] = shift
+        
     3. Zipf: tuple (c, s), where C is the leading coffecient and s is the exponent of frequency-rank distribution of word
     
-    ---output
-    a picture with best fitting curve
+    ---Parameters
+    1. FORMAT: string
+        The format of your plot. Most backends support png, pdf, ps, eps and svg. 
+        else: just show plot instead of saving.
+        
+    2. Path: file path for saving picture
+        Default: save at current document
+        if Path == np.nan, no figure will be saved (just show it)
     
-    ---return
-    fitting parameters for scaling function
+    ---Output
+        a picture with best fitting curve
+    
+    ---Return
+        fit_para[best]: return of curve_fit()
+            fitting parameters of scaling function for the best basis
+            fit_para[best][0] contains q and C of fun_theory(x, q, C)
+            see innner function > fun_theory()
+            
+            for curve_fit(),
+            see scipy.optimize.curve_fit for data structure
+            #url = https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.curve_fit.html
+        
     
     '''
     fig, ax = plt.subplots()
@@ -554,7 +639,8 @@ def scaling_fit(data, Rg_0, V, H, Zipf, name, FORMAT = 'pdf', Path = ''):
         y_const = [H[i] for j in range(Slice_number)] #y_const =[H[i], H[i], ..., H[i]], Slice_number elements
         plt.plot(x_range, y_const) #plot y=H[i]
         plt.plot(x_const, y_range) #plot x=V[i]   
-    #-----------------------------  
+    
+    #---innner function
     def fun_theory(x, q, C):
         '''theory of scaling curve                
         '''
@@ -564,6 +650,8 @@ def scaling_fit(data, Rg_0, V, H, Zipf, name, FORMAT = 'pdf', Path = ''):
         '''power law fit
         '''
         return q*x**s
+    #---innner function
+    
     number = len(data) #number of scaling lines need fitting
     q0 = (100, 0.5) #initial guess
     fit_para = {}
@@ -637,21 +725,39 @@ def fit_with_cut(data, Rg_0, V, H, Zipf, name, FORMAT, Path = ''):
     '''fit data bigger than 0.25*V[0] to rise accuracy of fitting
     if 0.25*V[0] is not small enough, lowering the low bound of data automatically
     
-    ---parameters
+    ---Input
     1. data: set, the output that comes form plot_g(). It can be g or glu
         It is the set of points on scaling lines 
         #PS: I suggest use glu (original data), not g (coarse-grain data)
+        
     2. Rg_0: mean ratio of scaling curve
         It is 0th element of Rg = rg(), i.e., Rg_0 = Rg[0]
         Instead of Rg_0, you can try RH_0 = RH[0] (but fitting performance is bad)
         where RH = which_plot(), RH[0] = mean, RH[1] = std, and RH[2] = shift
+        
     3. Zipf: tuple (c, s), where C is the leading coffecient and s is the exponent of frequency-rank distribution of word
     
-    ---output
-    an fitted plot that has fitting score
+    ---Parameters
+    1. FORMAT: string
+        The format of your plot. Most backends support png, pdf, ps, eps and svg. 
+        else: just show plot instead of saving.
     
-    ---return
-    fit_para: fitting parameters for scaling function
+    2. Path: file path for saving picture
+        Default: save at current document
+        if Path == np.nan, no figure will be saved (just show it)
+    
+    ---Output
+        an fitted plot that has fitting score
+    
+    ---Return
+        fit_para[best]: return of curve_fit()
+            fitting parameters of scaling function for the best basis
+            fit_para[best][0] contains q and C of fun_theory(x, q, C)
+            see innner function > fun_theory()
+            
+            for curve_fit(),
+            see scipy.optimize.curve_fit for data structure
+            #url = https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.curve_fit.html
     '''
     data_range = [0.25 - i*0.01 for i in range(26)]
     check = 0

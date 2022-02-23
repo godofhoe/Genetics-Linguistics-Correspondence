@@ -13,18 +13,15 @@ from scipy.optimize import curve_fit
 def count_allo(pdframe1, pdframe2, feature1 = "word", feature2 = "syl", feature3 = "sylFreq"):
     '''count the allocations of syllagrams and the chains of words
     
-    input:
+    ---Input
         pdframe1, pdframe2 : class pandas.DataFrame.
-        This two args are from module > count.py > info(file_name, encode = "UTF-8")
-        They would be word and syl (See Run_case_by_case.ipynb)
+            This two args are from module > count.py > info(file_name, encode = "UTF-8")
+            They would be word and syl (See Run_case_by_case.ipynb)
     
-    output:
-        add a frame "#allocations" (numbers of allocations of syls) in pdframe2
-        add a frame "#chains" (numbers of chains of words) in pdframe1
+    ---Output
+    1. add a frame "#allocations" (numbers of allocations of syls) in pdframe2
     
-    return:
-        none
-        
+    2. add a frame "#chains" (numbers of chains of words) in pdframe1
     '''
     
     word_array = pdframe1[feature1] #ex: word_array=['apple','coffee','elephant']
@@ -68,12 +65,10 @@ def count_allo(pdframe1, pdframe2, feature1 = "word", feature2 = "syl", feature3
     #add a frame "#chains" (numbers of chains of words) to word
     pdframe1['#chains'] = chain_num_array 
 
-    return None
-
 def Allo_plot(name, syl, x_pos = 0, y_pos = 0, FORMAT = 'png', Path = ''):
     '''draw FRD plot of words and syllagrams
 
-       parameters:
+    ---Input
     1. name: str
        "XXX" (your file name without filename extension)
 
@@ -81,19 +76,24 @@ def Allo_plot(name, syl, x_pos = 0, y_pos = 0, FORMAT = 'png', Path = ''):
        output of function info() or N_gram_info() in count.py
        you should get them from
        big, syl, word, longest = info(filename, encode)
-
-    3. x_pos, y_pos : number
+    
+    ---Parameters
+    1. x_pos, y_pos : float
        (x_position, y_position) of your formula on FRD plot
 
-    4. FORMAT: string
-       The format of your RRD plot. Most backends support png, pdf, ps, eps and svg. 
-       else: just show plot instead of saving.
+    2. FORMAT: string
+        The format of your plot. Most backends support png, pdf, ps, eps and svg. 
+        else: just show plot instead of saving.
     
-    5. Path: file path for saving picture
-       Default: save at current document
+    3. Path: file path for saving picture
+        Default: save at current document
+        if Path == np.nan, no figure will be saved (just show it)
     
-       output:
-    figure of allocation distribution
+    ---Output
+       figure of allocation distribution
+    
+    ---Return
+       (A, B): fitting parameters of Allo
     '''
     Syl = syl.sort_values(by = '#allocations', ascending=False)
     reSyl = Syl.reset_index()
@@ -169,11 +169,13 @@ def Allo_plot(name, syl, x_pos = 0, y_pos = 0, FORMAT = 'png', Path = ''):
             plt.close()
     except:
         plt.show()
+    
+    return (A, B)
         
 def Chain_plot(name, word, x_pos = 0, y_pos = 0, FORMAT = 'png', Path = ''):
     '''draw allocation-rank plot 
 
-       parameters:
+    ---Input
     1. name: str
        "XXX" (your file name without filename extension)
 
@@ -181,19 +183,24 @@ def Chain_plot(name, word, x_pos = 0, y_pos = 0, FORMAT = 'png', Path = ''):
        output of function info() or N_gram_info() in count.py
        you should get them from
        big, syl, word, longest = info(filename, encode)
-
-    3. x_pos, y_pos : number
+    
+    ---Parameters
+    1. x_pos, y_pos : float
        (x_position, y_position) of your formula on FRD plot
 
-    4. FORMAT: string
-       The format of your RRD plot. Most backends support png, pdf, ps, eps and svg. 
-       else: just show plot instead of saving.
+    2. FORMAT: string
+        The format of your plot. Most backends support png, pdf, ps, eps and svg. 
+        else: just show plot instead of saving.
     
-    5. Path: file path for saving picture
-       Default: save at current document
+    3. Path: file path for saving picture
+        Default: save at current document
+        if Path == np.nan, no figure will be saved (just show it)
     
-       output:
-    figure of chain distribution
+    ---Output
+       figure of chain distribution
+    
+    ---Return
+       (A, B): fitting parameters of Chain
     '''
     Word = word.sort_values(by='#chains', ascending=False)
     reWord = Word.reset_index()
@@ -271,3 +278,5 @@ def Chain_plot(name, word, x_pos = 0, y_pos = 0, FORMAT = 'png', Path = ''):
             plt.close()
     except:
         plt.show()
+        
+    return (A, B)
