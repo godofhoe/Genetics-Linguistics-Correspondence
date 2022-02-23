@@ -2,8 +2,7 @@
 '''
 @author  gmking
 
-This module contains tools in Network.ipynb.
-The functions here won't show plots. If you want to see every picture of your txt, you should use Network.ipynb and DONOT import this module.
+This module contains the tools to construct and analyze network
 '''
 
 import networkx as nx
@@ -103,13 +102,16 @@ def build_edge(coordinate):
     return graph_word, graph_syl
 
 def plot_cluster_word(name, cluster_word, FORMAT = 'pdf', Path = ''):
+    '''
+    calculate the local clustering coefficient and cumulative probability of word layer
+    '''
 
     fig, ax = plt.subplots()
 
     cluster_rank_word = list(cluster_word)
     cluster_coef_word = sorted([cluster_word[i] for i in cluster_word], reverse = True)
-    plt.title('cumulative probability of $C_b$', fontsize = 20)
-    plt.xlabel('$C_b$, local clustering coefficient of $G_b$', size = 20)
+    plt.title('Cumulative probability of $C_b$', fontsize = 20)
+    plt.xlabel('Local clustering coefficient $C_b$', size = 20)
     plt.ylabel('$P(x|x\leq C_b)$', size = 20)
     ax.tick_params(axis='x', labelsize=15) 
     ax.tick_params(axis='y', labelsize=15)
@@ -118,7 +120,7 @@ def plot_cluster_word(name, cluster_word, FORMAT = 'pdf', Path = ''):
     plt.hist(cluster_coef_word, bins = 20, cumulative=True, density = 1)
     ym, yM = plt.ylim()
     xm, xM = plt.xlim()
-    plt.text(xM/10+xm*9/10, yM*4/5, 'average=%.2f' % (sum(cluster_coef_word)/len(cluster_coef_word)), fontsize=30)
+    plt.text(xM/10+xm*9/10, yM*4/5, 'average $C_b$=%.2f' % (sum(cluster_coef_word)/len(cluster_coef_word)), fontsize=30)
     try:
         if Path == '':
             fig.savefig('cluster_word_' + name + '.' + FORMAT, dpi = 400, format = FORMAT)
@@ -130,13 +132,16 @@ def plot_cluster_word(name, cluster_word, FORMAT = 'pdf', Path = ''):
         plt.show()
         
 def plot_cluster_syl(name, cluster_syl, FORMAT = 'pdf', Path = ''):
+    '''
+    calculate the local clustering coefficient and cumulative probability of syllagram layer
+    '''
 
     fig, ax = plt.subplots()
 
     cluster_rank_syl = list(cluster_syl)
     cluster_coef_syl = sorted([cluster_syl[i] for i in cluster_syl], reverse = True)
-    plt.title('cumulative probability of $C_c$', fontsize = 20)
-    plt.xlabel('$C_c$, local clustering coefficient of $G_c$', size = 20)
+    plt.title('Cumulative probability of $C_c$', fontsize = 20)
+    plt.xlabel('Local clustering coefficient $C_c$', size = 20)
     plt.ylabel('$P(x|x\leq C_c)$', size = 20)
     ax.tick_params(axis='x', labelsize=15) 
     ax.tick_params(axis='y', labelsize=15)
@@ -145,7 +150,7 @@ def plot_cluster_syl(name, cluster_syl, FORMAT = 'pdf', Path = ''):
     plt.hist(cluster_coef_syl, bins = 20, cumulative=True, density = 1)
     ym, yM = plt.ylim()
     xm, xM = plt.xlim()
-    plt.text(xM/6+xm*5/6, yM/2, 'average=%.2f' % (sum(cluster_coef_syl)/len(cluster_coef_syl)), fontsize=30)
+    plt.text(xM/6+xm*5/6, yM/2, 'average $C_c$=%.2f' % (sum(cluster_coef_syl)/len(cluster_coef_syl)), fontsize=30)
     try:
         if Path == '':
             fig.savefig('cluster_syl_' + name + '.' + FORMAT, dpi = 400, format = FORMAT)
@@ -167,15 +172,21 @@ def plot_degree_word(name, word_degree_sequence, FORMAT = 'pdf', Path = ''):
             
     fig, ax = plt.subplots()
     plt.plot(T[0], T[1], 'ro', markersize=4)
-    plt.xlabel('degree $d_b$', size = 20)
-    plt.ylabel('frequency', size = 20)
-    ax.tick_params(axis='x', labelsize=15) 
-    ax.tick_params(axis='y', labelsize=15)
-    #https://stackoverflow.com/questions/6774086/why-is-my-xlabel-cut-off-in-my-matplotlib-plot
-    plt.gcf().subplots_adjust(left = 0.17, bottom = 0.17)
-    plt.title(name, fontsize = 25)
+    plt.xlabel('Degree $d_b$', size = 25)
+    plt.ylabel('Frequency', size = 25)
+    
     plt.xscale('log')
     plt.yscale('log')
+    plt.xticks(fontsize = 20)
+    plt.yticks(fontsize = 20)
+    plt.title(name, fontsize = 25)
+    
+    #https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.tick_params.html
+    plt.tick_params(which = 'major', length = 10)
+    plt.tick_params(which = 'minor', length = 4)
+    
+    #https://stackoverflow.com/questions/6774086/why-is-my-xlabel-cut-off-in-my-matplotlib-plot
+    plt.gcf().subplots_adjust(left = 0.17, bottom = 0.17)
     try:
         if Path == '':
             fig.savefig('degree_word_' + name + '.' + FORMAT, dpi = 400, format = FORMAT)
@@ -253,15 +264,21 @@ def plot_degree_syl(name, syl_degree_sequence, FORMAT = 'pdf', Path = ''):
     text_y = min(theo)
     plt.text(text_x, text_y, parameters, fontsize = 30)
 
-    plt.xlabel('degree $d_c$', size = 20)
-    plt.ylabel('frequency', size = 20)
-    ax.tick_params(axis='x', labelsize=15) 
-    ax.tick_params(axis='y', labelsize=15)
-    #https://stackoverflow.com/questions/6774086/why-is-my-xlabel-cut-off-in-my-matplotlib-plot
-    plt.gcf().subplots_adjust(left = 0.17, bottom = 0.17)
-    plt.title(name, fontsize = 25)
+    plt.xlabel('Degree $d_c$', size = 25)
+    plt.ylabel('Frequency', size = 25)
+    
     plt.xscale('log')
     plt.yscale('log')
+    plt.xticks(fontsize = 20)
+    plt.yticks(fontsize = 20)
+    plt.title(name, fontsize = 25)
+    
+    #https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.tick_params.html
+    plt.tick_params(which = 'major', length = 10)
+    plt.tick_params(which = 'minor', length = 4)
+    
+    #https://stackoverflow.com/questions/6774086/why-is-my-xlabel-cut-off-in-my-matplotlib-plot
+    plt.gcf().subplots_adjust(left = 0.17, bottom = 0.17)
     try:
         if Path == '':
             fig.savefig('degree_syl_' + name + '.' + FORMAT, dpi = 400, format = FORMAT)
@@ -303,17 +320,17 @@ def plot_shortest_path(name, sum_shorest_path, G_name, FORMAT = 'pdf', Path = ''
 
     fig, ax = plt.subplots()
     plt.hist(sp, bins = 20)
-    plt.xlabel('path length in %s' % G_name, size = 20)
-    plt.ylabel('frequency', size = 20)
+    plt.xlabel('Path length in %s' % G_name, size = 20)
+    plt.ylabel('Frequency', size = 20)
     plt.yscale('log')
     ax.tick_params(axis='x', labelsize=15) 
     ax.tick_params(axis='y', labelsize=15)
     #https://stackoverflow.com/questions/6774086/why-is-my-xlabel-cut-off-in-my-matplotlib-plot
     plt.gcf().subplots_adjust(left = 0.17, bottom = 0.17)
-    plt.title('distribution of path length', fontsize = 20)
+    plt.title('Distribution of path length', fontsize = 20)
     ym, yM = plt.ylim()
     xm, xM = plt.xlim()
-    plt.text(xM/6+xm*5/6, yM/2, 'average without zero=%.2f' % avg_spL, fontsize=20)
+    plt.text(xM/6+xm*5/6, yM/2, 'Average without zero=%.2f' % avg_spL, fontsize=20)
     try:
         if Path == '':
             fig.savefig('path_' + G_name + '_' + name + '.' + FORMAT, dpi = 400, format = FORMAT)

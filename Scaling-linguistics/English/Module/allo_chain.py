@@ -2,7 +2,7 @@
 """
 @author  gmking
 
-This module is use to calculate the allocations and chains of English corpus.
+This module is used to calculate the allocations and chains.
 """
 import numpy as np
 import pandas as pd
@@ -14,12 +14,16 @@ def count_allo(pdframe1, pdframe2, feature1 = "word", feature2 = "syl", feature3
     '''count the allocations of syllagrams and the chains of words
     
     input:
-    pdframe1, pdframe2 : word and syl with class pandas.DataFrame. This two args are from the function, info(file_name, encode = "UTF-8"),  
-    in the module count.py.
+        pdframe1, pdframe2 : class pandas.DataFrame.
+        This two args are from module > count.py > info(file_name, encode = "UTF-8")
+        They would be word and syl (See Run_case_by_case.ipynb)
     
     output:
-    add a frame "#allocations" (numbers of allocations of syls) in pdframe2
-    add a frame "#chains" (numbers of chains of words) in pdframe1
+        add a frame "#allocations" (numbers of allocations of syls) in pdframe2
+        add a frame "#chains" (numbers of chains of words) in pdframe1
+    
+    return:
+        none
         
     '''
     
@@ -63,7 +67,6 @@ def count_allo(pdframe1, pdframe2, feature1 = "word", feature2 = "syl", feature3
     
     #add a frame "#chains" (numbers of chains of words) to word
     pdframe1['#chains'] = chain_num_array 
-    
 
     return None
 
@@ -149,9 +152,9 @@ def Allo_plot(name, syl, x_pos = 0, y_pos = 0, FORMAT = 'png', Path = ''):
     else:
         plt.text(xmid, ytop, parameters, fontsize=30)
     #-----------------------------------------
-    plt.xlabel('rank of syllagram($y\prime$)', size = 20)
+    plt.xlabel('Rank of syllagram($y\prime$)', size = 20)
     plt.xscale('log')
-    plt.ylabel('allocations', size = 20)
+    plt.ylabel('$Allo(y\prime)$', size = 20)
     ax.tick_params(axis='x', labelsize=15) 
     ax.tick_params(axis='y', labelsize=15)
     #https://stackoverflow.com/questions/6774086/why-is-my-xlabel-cut-off-in-my-matplotlib-plot
@@ -251,9 +254,9 @@ def Chain_plot(name, word, x_pos = 0, y_pos = 0, FORMAT = 'png', Path = ''):
     else:
         plt.text(xmid, ytop, parameters, fontsize=30)
     #-----------------------------------------     
-    plt.xlabel('rank of word($x\prime$)', size = 20)
+    plt.xlabel('Rank of word($x\prime$)', size = 20)
     plt.xscale('log')
-    plt.ylabel('chains', size = 20)
+    plt.ylabel('$Chain(x\prime)$', size = 20)
     ax.tick_params(axis='x', labelsize=15) 
     ax.tick_params(axis='y', labelsize=15)
     #https://stackoverflow.com/questions/6774086/why-is-my-xlabel-cut-off-in-my-matplotlib-plot

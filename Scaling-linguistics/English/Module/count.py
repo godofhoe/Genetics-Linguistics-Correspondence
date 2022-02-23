@@ -4,10 +4,13 @@ Created on Fri Dec 30 17:02:47 2016
 
 @author: shan, gmking
 
-This module is used to construct a dataframe with all statistical information we need.
-The core function of this module is info(file_name, encode = "UTF-8")
+This module is used to construct a dataframe with all information we need.
+The core function of this module is info()
 
-
+The main quests are 
+1. construct Book and generate fake corpora
+2. build FRD, RRD, {V_m} and {H_n}
+3. count distribution of N syllagrams
 """
 
 import pandas as pd
@@ -274,28 +277,31 @@ def produce_wordRank_sylRank_frame(pd_word,pd_syl,longest):
 
 
 def info(file_name, encode = "UTF-8"):
-    '''This is the main program.
+    '''the core function that give you statistical data, including
+    1. a dataframe contain words and their all compositions (big)
+    2. the frequency information of syllagrams (syl) and words (word)
+    3. the longest length of single word (longest)
         
     paras:
     --------
-    file_name : string
-      XXX.txt. We suggest you using the form that set 
+    1. file_name : string, it must be like XXX.txt
+      We suggest you using the form that set 
       name = 'XXX' 
       and 
       filename = name + '.txt'.
     
-    encode : encoding of your txt
+    2. encode : encoding of your txt
     
     
     return:
     --------
-    data_frame: pd.dataframe
+    1. data_frame: pd.dataframe
       a big data frame contain the information of words and its compositition
-    pd_syl: pd.dataframe
+    2. pd_syl: pd.dataframe
       a data frame contain the frequency information of syllagrams
-    another_word: pd.dataframe
+    3. another_word: pd.dataframe
       a data frame contain the frequency information of words
-    longest_L: int
+    4. longest_L: int
       the biggest length of single word.
     
     '''
@@ -384,7 +390,7 @@ def write_to_excel(big, word, syl, name):
 
 
 def geometric_sequence(word, syl):
-    '''give geometric sequence {Hn} and {Vn}
+    '''give geometric sequence {Hn} and {Vm}
     
     paras:
     ---
@@ -413,13 +419,15 @@ def geometric_sequence(word, syl):
         #ref: Count how many values in a list that satisfy certain condition
         SV = sum(1 for cf in word['wordFreq'] if cf == Vf[i])
         SVT = SVT + SV
-        V[i] = len(word['wordFreq']) - SVT + 1
+        V[i] = len(word['wordFreq']) - SVT
+    #we need to add total kinds of words as V_1    
     V[:0] = (max(word['wordRank']),)    
         
     for i in range(len(set(syl['sylFreq']))):
         SH = sum(1 for wf in syl['sylFreq'] if wf == Hf[i])
         SHT = SHT + SH
-        H[i] = len(syl['sylFreq']) - SHT + 1
+        H[i] = len(syl['sylFreq']) - SHT
+    #we need to add total kinds of syllagram as H_1
     H[:0] = (max(syl['sylRank']),)
     
     return V, H
@@ -464,7 +472,7 @@ def draw_RRD_plot(big, word, syl, longest, name, V, H, need_line = 'Y', number_o
 
 
         for i in range(number_of_lines):
-            x_const = [V[i] for j in range(Slice_number)]#x_const =[V[i], V[i], ..., V[i]], Slice_number elements
+            x_const = [V[i] for j in range(Slice_number)] #x_const =[V[i], V[i], ..., V[i]], Slice_number elements
             y_const = [H[i] for j in range(Slice_number)] #y_const =[H[i], H[i], ..., H[i]], Slice_number elements
             plt.plot(x_range, y_const) #plot y=H[i] on RRD plot
             plt.plot(x_const, y_range) #plot x=V[i] on RRD plot   
@@ -486,17 +494,18 @@ def draw_RRD_plot(big, word, syl, longest, name, V, H, need_line = 'Y', number_o
     ax.xaxis.set_major_formatter(formatter)
     ax.yaxis.set_major_formatter(formatter)
 
-    plt.xticks(fontsize = 15)
-    plt.yticks(fontsize = 15)
+    plt.xticks(fontsize = 20)
+    plt.yticks(fontsize = 20)
     #https://stackoverflow.com/questions/34227595/how-to-change-font-size-of-the-scientific-notation-in-matplotlib
-    ax.yaxis.offsetText.set_fontsize(15)
-    ax.xaxis.offsetText.set_fontsize(15)
+    ax.yaxis.offsetText.set_fontsize(20)
+    ax.xaxis.offsetText.set_fontsize(20)
 
-    plt.xlabel('word', size = 15)
-    plt.ylabel('syllagram', size = 15)
+    plt.xlabel('word', size = 25)
+    plt.ylabel('syllagram', size = 25)
     plt.xlim([0, max(word['wordRank'])*11/10])
     plt.ylim([0, max(syl['sylRank'])*17/15])
     plt.title(name, size = 25)
+    plt.gcf().subplots_adjust(left = 0.17, bottom = 0.17)
     try:
         if Path == '':
             fig.savefig('RRD of ' + name + '.' + FORMAT, dpi = 400, format = FORMAT) 
@@ -552,7 +561,7 @@ def N_syl_dist(name, big, longest, FORMAT = 'png', Path = ''):
         plt.show()
 
 def which_plot(name, V, H, x = 'H', max_range = 50, shift = 'N', FORMAT = 'png', Path = ''):
-    '''check ratio of geometric sequence {Hn} or {Vn}
+    '''check ratio of geometric sequence {Hn} or {Vm}
 
        parameters:
     1. name: str
@@ -619,7 +628,7 @@ def which_plot(name, V, H, x = 'H', max_range = 50, shift = 'N', FORMAT = 'png',
         ax.tick_params(axis='x', labelsize=15) 
         ax.tick_params(axis='y', labelsize=15)
         plt.gcf().subplots_adjust(left = 0.17, bottom = 0.17)
-        plt.xlabel('$\ell$ for $H_{\ell+1}/H_{\ell}$', size = 20)
+        plt.xlabel('$n$ for $H_{n+1}/H_{n}$', size = 20)
         plt.ylabel('$r_H$', size = 20)
         plt.ylim([0, max(r) + 0.1])
         plt.plot(r_position, r, 'ro')        
@@ -678,7 +687,7 @@ def which_plot(name, V, H, x = 'H', max_range = 50, shift = 'N', FORMAT = 'png',
         ax.tick_params(axis='x', labelsize=15) 
         ax.tick_params(axis='y', labelsize=15)
         plt.gcf().subplots_adjust(left = 0.17, bottom = 0.17)
-        plt.xlabel('$m$ for $V_{m+1}/H_{m}$', size = 20)
+        plt.xlabel('$m$ for $V_{m+1}/V_{m}$', size = 20)
         plt.ylabel('$r_V$', size = 20)
         plt.ylim([0, max(r) + 0.1])
         plt.plot(r_position, r, 'ro')        
@@ -740,9 +749,6 @@ def FRD_plot(name, word, syl, x_pos = 2, y_pos = 10, FORMAT = 'png', Path = ''):
     t = [int(min(T[0])), int(max(T[0])), s]
     C = 1 / incomplete_harmonic(t)
     fig, ax = plt.subplots()
-    plt.xlabel('rank', size = 20)
-    plt.ylabel('frequency', size = 20)
-    plt.title(name, fontsize = 25)
 
     xdata = np.linspace(min(T[0]), max(T[0]), num = (max(T[0]) - min(T[0]))*10)
     theo = Zipf_law(xdata, s, C) #Notice theo is normalized, i.e, the probability density
@@ -753,32 +759,30 @@ def FRD_plot(name, word, syl, x_pos = 2, y_pos = 10, FORMAT = 'png', Path = ''):
     if (x_pos, y_pos) == (0,0):
         x_mid = 1.2
         y_min = 0.2
-        plt.text(x_mid, y_min,'$%.3fx^{-%.2f}$'%(C, s), fontsize=40) #write formula on the plot
+        plt.text(x_mid, y_min,'$b=-%.2f$'% s, fontsize=40) #write formula on the plot
     else:
-        plt.text(x_pos, y_pos,'$%.3fx^{-%.2f}$'%(C, s), fontsize=40) #write formula on the plot
+        plt.text(x_pos, y_pos,'$b=-%.2f$'% s, fontsize=40) #write formula on the plot
     
         
     plt.plot(xdata, theo, 'g-')
     #-----------------------------------------
     plt.ylim([0.1, 10*max(max_wf, max_cf)])
-    plt.yscale('log')
-    plt.xscale('log')
     plt.plot(wf, 'ro', label = 'word', markersize=4)
-    plt.plot(cf, 'x', label = 'syl', markersize=6)
+    plt.plot(cf, 'x', label = 'syllagram', markersize=6)
     plt.legend(loc = 'best', prop={'size': 20})
     
-    #https://atmamani.github.io/cheatsheets/matplotlib/matplotlib_2/
-    formatter = ticker.ScalarFormatter(useMathText=True) 
-    formatter.set_scientific(True) 
-    formatter.set_powerlimits((-1,1))
-    ax.xaxis.set_major_formatter(formatter)
-    ax.yaxis.set_major_formatter(formatter) 
+    plt.xlabel('Rank', size = 25)
+    plt.ylabel('Frequency', size = 25)
     
-    #https://stackoverflow.com/questions/34227595/how-to-change-font-size-of-the-scientific-notation-in-matplotlib
-    ax.xaxis.offsetText.set_fontsize(15)
-    ax.yaxis.offsetText.set_fontsize(15) 
-    plt.xticks(fontsize = 15)
-    plt.yticks(fontsize = 15)
+    plt.xscale('log')
+    plt.yscale('log')
+    plt.xticks(fontsize = 20)
+    plt.yticks(fontsize = 20)
+    plt.title(name, fontsize = 25)
+    
+    #https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.tick_params.html
+    plt.tick_params(which = 'major', length = 10)
+    plt.tick_params(which = 'minor', length = 4)
     
     #https://stackoverflow.com/questions/6774086/why-is-my-xlabel-cut-off-in-my-matplotlib-plot
     plt.gcf().subplots_adjust(left = 0.17, bottom = 0.17)
