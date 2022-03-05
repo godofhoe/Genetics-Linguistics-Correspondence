@@ -2,7 +2,7 @@
 """
 @author  gmking
 
-This module is use to calculate the allocations and chains of English corpus.
+This module is used to calculate the allocations and chains.
 """
 import numpy as np
 import pandas as pd
@@ -13,14 +13,15 @@ from scipy.optimize import curve_fit
 def count_allo(pdframe1, pdframe2, feature1 = "protein", feature2 = "dom", feature3 = "domFreq"):
     '''count the allocations of domains and the chains of proteins
     
-    input:
-    pdframe1, pdframe2 : protein and dom with class pandas.DataFrame. This two args are from the function, info(file_name, encode = "UTF-8"),  
-    in the module count.py.
+    ---Input
+        pdframe1, pdframe2 : class pandas.DataFrame.
+            This two args are from module > count.py > info(file_name, encode = "UTF-8")
+            They would be protein and dom (See Run_case_by_case.ipynb)
     
-    output:
-    add a frame "#allocations" (numbers of allocations of doms) in pdframe2
-    add a frame "#chains" (numbers of chains of proteins) in pdframe1
-        
+    ---Output
+    1. add a frame "#allocations" (numbers of allocations of doms) in pdframe2
+    
+    2. add a frame "#chains" (numbers of chains of proteins) in pdframe1
     '''
     
     protein_array = pdframe1[feature1] #ex: protein_array=['apple','coffee','elephant']
@@ -63,34 +64,38 @@ def count_allo(pdframe1, pdframe2, feature1 = "protein", feature2 = "dom", featu
     
     #add a frame "#chains" (numbers of chains of proteins) to protein
     pdframe1['#chains'] = chain_num_array 
-    
-
-    return None
 
 def Allo_plot(name, dom, x_pos = 0, y_pos = 0, FORMAT = 'png', Path = ''):
     '''draw FRD plot of proteins and domains
 
-       parameters:
+    ---Input
     1. name: str
-       "XXX" (your file name without filename extension)
+        "XXX" (your file name without filename extension)
 
     2. dom: pd.daframe
-       output of function info() or N_gram_info() in count.py
-       you should get them from
-       big, dom, protein, longest = info(filename, encode)
+        output of function info() or N_gram_info() in count.py
+        you should get them from
+        big, dom, protein, longest = info(filename, encode)
 
-    3. x_pos, y_pos : number
-       (x_position, y_position) of your formula on FRD plot
+    ---Parameters
+    1. x_pos, y_pos : float
+        (x_position, y_position) of your formula on FRD plot
 
-    4. FORMAT: string
-       The format of your RRD plot. Most backends support png, pdf, ps, eps and svg. 
-       else: just show plot instead of saving.
+    2. FORMAT: string
+        The format of your plot. Most backends support png, pdf, ps, eps and svg. 
+        else: just show plot instead of saving.
     
-    5. Path: file path for saving picture
-       Default: save at current document
+    3. Path: file path for saving picture
+        Default: save at current document
+        if Path == np.nan, no figure will be saved (just show it)
+        else, the figure will be saved according to Path
     
-       output:
-    figure of allocation distribution
+    ---Output
+        figure of allocation distribution
+    
+    ---Return
+        Allo_fit: tuple (A, B), (float, float)
+            fitting parameters of Allo(y') = (-A ln y' + B)^2
     '''
     Dom = dom.sort_values(by = '#allocations', ascending=False)
     reDom = Dom.reset_index()
@@ -121,19 +126,23 @@ def Allo_plot(name, dom, x_pos = 0, y_pos = 0, FORMAT = 'png', Path = ''):
     A = format(abs(popt[0]), '#.%dg' % a_dig)  # give a_dig significant digits
     B = format(popt[1], '#.%dg' % b_dig)  # give b_dig significant digits
     if 'e' in A: #make scientific notation more beautiful
-        A = A.split('e')[0] + '\\times 10^{' + str(int(A.split('e')[1])) + '}'
-    if A[-1] == '.':
-        A = A[:-1]
+        A_text = A.split('e')[0] + '\\times 10^{' + str(int(A.split('e')[1])) + '}'
+    elif A[-1] == '.':
+        A_text = A[:-1]
+    else:
+        A_text = A
     if 'e' in B: #make scientific notation more beautiful
-        B = B.split('e')[0] + '\\times 10^{' + str(int(B.split('e')[1])) + '}'
-    if B[-1] == '.':
-        B = B[:-1]
+        B_text = B.split('e')[0] + '\\times 10^{' + str(int(B.split('e')[1])) + '}'
+    elif B[-1] == '.':
+        B_text = B[:-1]
+    else:
+        B_text = B
         
     #a perfect solution to text wrap!!
     #https://stackoverflow.com/questions/2660319/putting-newline-in-matplotlib-label-with-tex-in-python
     parameters = (r"$\alpha=%s$"
                   "\n"
-                 r"$\beta=%s$") % (A, B)    
+                 r"$\beta=%s$") % (A_text, B_text)    
     
     a = 1.5  #auto positioning for m = min(dom['domRank']) = 1 always
     b = 2   #auto positioning for M = max(dom['domRank'])
@@ -149,9 +158,9 @@ def Allo_plot(name, dom, x_pos = 0, y_pos = 0, FORMAT = 'png', Path = ''):
     else:
         plt.text(xmid, ytop, parameters, fontsize=30)
     #-----------------------------------------
-    plt.xlabel('rank of domain($y\prime$)', size = 20)
+    plt.xlabel('Rank of domain($y\prime$)', size = 20)
     plt.xscale('log')
-    plt.ylabel('allocations', size = 20)
+    plt.ylabel('$Allo(y\prime)$', size = 20)
     ax.tick_params(axis='x', labelsize=15) 
     ax.tick_params(axis='y', labelsize=15)
     #https://stackoverflow.com/questions/6774086/why-is-my-xlabel-cut-off-in-my-matplotlib-plot
@@ -166,31 +175,42 @@ def Allo_plot(name, dom, x_pos = 0, y_pos = 0, FORMAT = 'png', Path = ''):
             plt.close()
     except:
         plt.show()
+    
+    Allo_fit = (float(A), float(B))
+    return Allo_fit
         
 def Chain_plot(name, protein, x_pos = 0, y_pos = 0, FORMAT = 'png', Path = ''):
     '''draw allocation-rank plot 
 
-       parameters:
+    ---Input
     1. name: str
-       "XXX" (your file name without filename extension)
+        "XXX" (your file name without filename extension)
 
     2. protein: pd.daframe
-       output of function info() or N_gram_info() in count.py
-       you should get them from
-       big, dom, protein, longest = info(filename, encode)
-
-    3. x_pos, y_pos : number
-       (x_position, y_position) of your formula on FRD plot
-
-    4. FORMAT: string
-       The format of your RRD plot. Most backends support png, pdf, ps, eps and svg. 
-       else: just show plot instead of saving.
+        output of function info() or N_gram_info() in count.py
+        you should get them from
+        big, dom, protein, longest = info(filename, encode)
     
-    5. Path: file path for saving picture
-       Default: save at current document
+    ---Parameters
+    1. x_pos, y_pos : float
+        (x_position, y_position) of your formula on FRD plot
+
+    2. FORMAT: string
+        The format of your plot. Most backends support png, pdf, ps, eps and svg. 
+        else: just show plot instead of saving.
     
-       output:
-    figure of chain distribution
+    3. Path: file path for saving picture
+        Default: save at current document
+        if Path == np.nan, no figure will be saved (just show it)
+        else, the figure will be saved according to Path
+    
+    ---Output
+        figure of chain distribution
+    
+    ---Return
+        Chain_fit: tuple (A, B, U_Chain), (float, float, int)
+            A, B are fitting parameters of Chain(x') = -A ln x' + B
+            U_Chain denotes the the least upper bound of Chain
     '''
     Protein = protein.sort_values(by='#chains', ascending=False)
     reProtein = Protein.reset_index()
@@ -223,19 +243,23 @@ def Chain_plot(name, protein, x_pos = 0, y_pos = 0, FORMAT = 'png', Path = ''):
     A = format(abs(popt[0]), '#.%dg' % a_dig)  # give a_dig significant digits
     B = format(popt[1], '#.%dg' % b_dig)  # give b_dig significant digits
     if 'e' in A: #make scientific notation more beautiful
-        A = A.split('e')[0] + '\\times 10^{' + str(int(A.split('e')[1])) + '}'
-    if A[-1] == '.':
-        A = A[:-1]
+        A_text = A.split('e')[0] + '\\times 10^{' + str(int(A.split('e')[1])) + '}'
+    elif A[-1] == '.':
+        A_text = A[:-1]
+    else:
+        A_text = A
     if 'e' in B: #make scientific notation more beautiful
-        B = B.split('e')[0] + '\\times 10^{' + str(int(B.split('e')[1])) + '}'
-    if B[-1] == '.':
-        B = B[:-1]    
+        B_text = B.split('e')[0] + '\\times 10^{' + str(int(B.split('e')[1])) + '}'
+    elif B[-1] == '.':
+        B_text = B[:-1]
+    else:
+        B_text = B
     
     #a perfect solution to text wrap!!
     #https://stackoverflow.com/questions/2660319/putting-newline-in-matplotlib-label-with-tex-in-python
     parameters = (r"$\gamma=%s$"
                   "\n"
-                 r"$\omega=%s$") % (A, B)    
+                 r"$\omega=%s$") % (A_text, B_text)    
     
     a = 1.5  #auto positioning for m = min(dom['domRank']) = 1 always
     b = 2   #auto positioning for M = max(dom['domRank'])
@@ -251,9 +275,9 @@ def Chain_plot(name, protein, x_pos = 0, y_pos = 0, FORMAT = 'png', Path = ''):
     else:
         plt.text(xmid, ytop, parameters, fontsize=30)
     #-----------------------------------------     
-    plt.xlabel('rank of protein($x\prime$)', size = 20)
+    plt.xlabel('Rank of protein($x\prime$)', size = 20)
     plt.xscale('log')
-    plt.ylabel('chains', size = 20)
+    plt.ylabel('$Chain(x\prime)$', size = 20)
     ax.tick_params(axis='x', labelsize=15) 
     ax.tick_params(axis='y', labelsize=15)
     #https://stackoverflow.com/questions/6774086/why-is-my-xlabel-cut-off-in-my-matplotlib-plot
@@ -268,3 +292,7 @@ def Chain_plot(name, protein, x_pos = 0, y_pos = 0, FORMAT = 'png', Path = ''):
             plt.close()
     except:
         plt.show()
+    
+    Chain_fit = (float(A), float(B))
+    U_Chain = max(reProtein['#chains'])
+    return Chain_fit, U_Chain

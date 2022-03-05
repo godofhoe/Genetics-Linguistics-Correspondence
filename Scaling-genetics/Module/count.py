@@ -4,10 +4,14 @@ Created on Fri Dec 30 17:02:47 2016
 
 @author: shan, gmking
 
-This module is used to construct a dataframe with all statistical information we need.
-The core function of this module is info(file_name, encode = "UTF-8")
+This module is used to construct a dataframe with all information we need.
+The core function of this module is info()
 
-
+The main quests are 
+1. construct Book
+2. build FRD, RRD, {V_m} and {H_n}
+3. count distribution of N domains
+4. save data
 """
 
 import pandas as pd
@@ -28,21 +32,31 @@ def read_file(filename, encode = 'UTF-8'):
     return a list of the proteins of text in the file; ignore punctuations.
     also returns the longest protein length in the file.
     
-    paras:
-    --------
-    file_name : string
-      XXX.txt. We suggest you using the form that set 
-      name = 'XXX' 
-      and 
-      filename = name + '.txt'.
+    ---Input
+        a txt file with 'encode' encoding
+    
+    ---Parameters
+    1. file_name : string
+          XXX.txt. We suggest you using the form that set 
+          name = 'XXX' 
+          and 
+          filename = name + '.txt'.
 
-    encode : encoding of your txt
+    2. encode : encoding of your txt
+    
+    ---Return
+    1. protein_list: array
+        a list of proteins in the txt file
+        
+    2. longest: int
+        max number of domains in a protein
+        
     """
     punctuation_set = set(u'''_—＄％＃＆:#$&!),.:;?]}¢'"、。〉》」』】〕〗〞︰︱︳﹐､﹒
     ﹔﹕﹖﹗﹚﹜﹞！），．：；？｜｝︴︶︸︺︼︾﹀﹂﹄﹏､～￠
     々‖•·ˇˉ－―--′’”([{£¥'"‵〈《「『【〔〖（［｛￡￥〝︵︷︹︻
     ︽︿﹁﹃﹙﹛﹝（｛“‘-—_…''')
-    num = 0
+    longest = 0
     protein_list = []
     with open(filename, "r", encoding = encode) as file:
         for line in file:
@@ -54,41 +68,48 @@ def read_file(filename, encode = 'UTF-8'):
                         new_protein = new_protein + c
                 if not len(new_protein) == 0: 
                     protein_list.append(protein)
-                    if len(protein.split('-')) > num:
-                        num = len(protein.split('-')) #max number of domains in a protein
+                    if len(protein.split('-')) > longest:
+                        longest = len(protein.split('-')) #max number of domains in a protein
                     
     if '\ufeff' in protein_list:
         protein_list.remove('\ufeff')
         
     print("read file successfully!")
-    return protein_list, num
+    return protein_list, longest
 
 def read_Ngram_file(filename, N, encode = 'UTF-8'):
     """
-    Read the text file with the given filename;    return a list of the proteins of text in the file; ignore punctuations.
+    Read the text file with the given filename;    
+    return a list of the proteins of text in the file; ignore punctuations.
     also returns the longest protein length in the file.
     
-    paras:
-    --------
-    file_name : string
+    ---Parameters
+    1. file_name : string
       XXX.txt. We suggest you using the form that set 
       name = 'XXX' 
       and 
       filename = name + '.txt'.
         
-    N: int
+    2. N: int
       "N"-gram. 
       For example : a string, ABCDEFG (In Chinese, you don't know what's the 'proteins' of a string)
       in 2-gram = [AB, CD, EF, G];
       in 3-gram = [ABC, DEF, G];
       in 4-gram = [ABCD, EFG]
       
-      two protein compose a txt 'ABCDE EFGHI' (This case happended in English corpus)
+      two proteins are in a txt 'ABCDE EFGHI' (This case happended in English corpus)
       in 2-gram = [AB, CD, E, EF, GH, I];
       in 3-gram = [ABC, DE, EFG, HI];
       in 4-gram = [ABCD, E, EFGH, I]
     
-    encode : encoding of your txt
+    3. encode : encoding of your txt
+    
+    ---Return
+    1. protein_list: array
+        a list of proteins in the txt file
+        
+    2. N: int
+        N-gram
     """
     punctuation_set = set(u'''_—＄％＃＆:#$&!),.:;?]}¢'"、。〉》」』】〕〗〞︰︱︳﹐､﹒
     ﹔﹕﹖﹗﹚﹜﹞！），．：；？｜｝︴︶︸︺︼︾﹀﹂﹄﹏､～￠
@@ -126,51 +147,63 @@ def read_Ngram_file(filename, N, encode = 'UTF-8'):
     return protein_list, N
 
 
-def count_frequency(protein_list):
-    """
-    Input: 
-        protein_list: list
+def count_frequency(unit_list):
+    """count the frequency of occurrence for unit in unit_list
+    
+    ---Input 
+        unit_list: list
             a list containing proteins or domains
-    Return: 
+        
+    ---Return: 
         D: set
             a dictionary mapping proteins to frequency.
     """
     D = {}
-    for new_protein in protein_list:
-        if new_protein in D:
-            D[new_protein] = D[new_protein] + 1
+    for new_unit in unit_list:
+        if new_unit in D:
+            D[new_unit] = D[new_unit] + 1
         else:
-            D[new_protein] = 1
+            D[new_unit] = 1
     return D   
 
 
-def decide_seq_order(protein_list):
-    """
-    Input:
-        protein_list: list
-            a list containing proteins or domains
-    Return: 
-        D: set
-            a dictionary mapping each protein to its sequential number, which is decided by the order it 
-            first appears in the protein_list.
-        another_list: list
-            a list containg non-repetitive proteins, each in the order it first appears in protein_list.
+def decide_seq_order(unit_list):
+    """generate the seqence of order of units in unit_list
+    
+    ---Input
+        unit_list: list
+            unit = protein or domain
+            a list containing units
+
+    ---Return 
+    1. D: set
+        a dictionary mapping each unit to its sequential number, 
+        which is decided by the order of first appearence in the unit_list.
+        
+    2. another_list: list
+        a list containg non-repetitive proteins obeys the order of first appearence in the unit_list
     """
     D = {}
     another_list = []
-    for protein in protein_list:
-        if protein not in another_list:
-            another_list.append(protein)
-    for num in range(len(another_list)):
-        D[another_list[num]] = num + 1
+    num = 0
+    
+    for unit in unit_list:
+        if unit not in another_list:
+            another_list.append(unit)
+            D[another_list[num]] = num + 1
+            num += 1
     
     return D, another_list
 
 
 def transfrom_proteinlist_into_domlist(protein_list):
-    """Divide each proteins in the protein_list into domains, order reserved.
-    Input: a list containing proteins
-    Return: a list containg dom 
+    """Divide each protein in the protein_list into domains, order preserved
+    
+    ---Input
+        a list contains proteins
+    
+    ---Return
+        a list contains domains
     """
     dom_list = []
     for protein in protein_list:
@@ -181,24 +214,25 @@ def transfrom_proteinlist_into_domlist(protein_list):
 '''
 def transfrom_proteinlist_into_Ngram_domlist(protein_list, N):
     """Divide each proteins in the protein_list into N-gram domains, order reserved.
+    
     -------Input: 
-    protein_list:
+    1. protein_list:
       a list containing proteins
     
-    N: int
+    2. N: int
       "N"-gram. 
       For example : a string, ABCDEFG (In Chinese, you don't know what's the 'proteins' of a string)
       in 2-gram = [AB, CD, EF, G];
       in 3-gram = [ABC, DEF, G];
       in 4-gram = [ABCD, EFG]
       
-      two protein compose a txt 'ABCDE EFGHI' (This case happended in English corpus)
+      two proteins are in a txt 'ABCDE EFGHI' (This case happended in English corpus)
       in 2-gram = [AB, CD, E, EF, GH, I];
       in 3-gram = [ABC, DE, EFG, HI];
       in 4-gram = [ABCD, E, EFGH, I]
     
     -------Return:
-    a list containg dom 
+        a list containg dom 
     """
     dom_list = []
     for protein in protein_list:
@@ -208,24 +242,48 @@ def transfrom_proteinlist_into_Ngram_domlist(protein_list, N):
     return dom_list
 '''
 
-def produce_data_frame(protein_list, protein_freq, protein_seq, varibleTitle):
-    protein_list = list(set(protein_list))
-    data = {}
-    protein_seq_list = []
-    protein_freq_list = []
+def produce_data_frame(unit_list, unit_freq, unit_seq, varibleTitle):
+    '''produce pandas dataframe
     
-    for protein in protein_list:
-        protein_freq_list.append(protein_freq[protein])
-        protein_seq_list.append(protein_seq[protein])
+    ---Input
+    unit denotes protein or domain 
+    
+    1. unit_list: list
+        return of read_file() or transfrom_proteinlist_into_domlist()
+    
+    2. unit_freq: set
+        return of count_frequency()
+    
+    3. unit_seq: set
+        return of decide_seq_order()
+    
+    ---Parameters
+        varibleTitle: string
+            the title name of column in dataframe
+    
+    ---Return
+        dataframe: pandas.DataFrame
+            a dataframe contains unit_list, unit_freq, and unit_seq
+    '''
+    
+    
+    unit_list = list(set(unit_list))
+    data = {}
+    unit_seq_list = []
+    unit_freq_list = []
+    
+    for unit in unit_list:
+        unit_freq_list.append(unit_freq[unit])
+        unit_seq_list.append(unit_seq[unit])
     
     first = varibleTitle 
     second = varibleTitle + "SeqOrder"
     third = varibleTitle + "Freq"
     forth = varibleTitle + "Rank"
     
-    data[first] = protein_list
-    data[second] = protein_seq_list
-    data[third] = protein_freq_list  
+    data[first] = unit_list
+    data[second] = unit_seq_list
+    data[third] = unit_freq_list  
     
     dataFrame = pd.DataFrame(data)
     dataFrame = dataFrame.sort_values([third, second],ascending = [False,True])
@@ -237,7 +295,28 @@ def produce_data_frame(protein_list, protein_freq, protein_seq, varibleTitle):
     return dataFrame
 
 
-def produce_proteinRank_domRank_frame(pd_protein,pd_dom,longest):
+def produce_proteinRank_domRank_frame(pd_protein, pd_dom, longest):
+    '''merge pd_protein and pd_dom into a large dataframe
+    
+    ---Input
+    1. pd_protein: pandas.DataFrame
+        return of produce_data_frame(unit = protein)
+    
+    2. pd_dom: pandas.DataFrame
+        return of produce_data_frame(unit = domain)
+    
+    3. longest: int
+        return of read_file
+        
+    ---Return
+        pd_protein: pandas.DataFrame
+            a large dataframe contains information of proteins and its domains
+            Ex: for 'ap-ple'
+                1th_dom = ap
+                2th_dom = ple
+    
+    '''
+    
     
     D = {}
     
@@ -274,32 +353,34 @@ def produce_proteinRank_domRank_frame(pd_protein,pd_dom,longest):
 
 
 def info(file_name, encode = "UTF-8"):
-    '''This is the main program.
+    '''the core function that give you statistical data, including
+    1. a dataframe contains proteins and their all domains (big)
+    2. the frequency information of domains (dom) and proteins (protein)
+    3. the longest length of single protein (longest)
         
-    paras:
-    --------
-    file_name : string
-      XXX.txt. We suggest you using the form that set 
-      name = 'XXX' 
-      and 
-      filename = name + '.txt'.
+    ---Parameters
+    1. file_name : string, it must be like XXX.txt
+      We suggest you using the form that set 
+      name = 'XXX' and filename = name + '.txt'.
     
-    encode : encoding of your txt
+    2. encode : encoding of your txt
     
     
-    return:
-    --------
-    data_frame: pd.dataframe
-      a big data frame contain the information of proteins and its compositition
-    pd_dom: pd.dataframe
-      a data frame contain the frequency information of domains
-    another_protein: pd.dataframe
-      a data frame contain the frequency information of proteins
-    longest_L: int
+    ---Return
+    1. data_frame: pandas.DataFrame
+      a big data frame contains the information of proteins and its domains
+      
+    2. pd_dom: pandas.DataFrame
+      a data frame contains the frequency information of domains
+      
+    3. another_protein: pandas.DataFrame
+      a data frame contains the frequency information of proteins
+      
+    4. longest_L: int
       the biggest length of single protein.
     
     '''
-    L, longest_L = read_file(file_name,encode)
+    L, longest_L = read_file(file_name, encode)
     protein_freq = count_frequency(L)
     print("Successfully count protein freqency!" + "(%s)" % file_name)
     
@@ -320,38 +401,37 @@ def info(file_name, encode = "UTF-8"):
 def N_gram_info(file_name, N, encode = "UTF-8"):
     '''This is only used to analysis N-gram proteins.
         
-    paras:
-    --------
-    file_name : string
+    ---Parameters
+    1. file_name : string
       XXX.txt. We suggest you using the form that set 
-      name = 'XXX' 
-      and 
-      filename = name + '.txt'.
+      name = 'XXX' and filename = name + '.txt'.
         
-    N: int
+    2. N: int
       "N"-gram. 
       For example : a string, ABCDEFG (In Chinese, you don't know what's the 'proteins' of a string)
       in 2-gram = [AB, CD, EF, G];
       in 3-gram = [ABC, DEF, G];
       in 4-gram = [ABCD, EFG]
       
-      two protein compose a txt 'ABCDE EFGHI' (This case happended in English corpus)
+      two proteins are in a txt 'ABCDE EFGHI' (This case happended in English corpus)
       in 2-gram = [AB, CD, E, EF, GH, I];
       in 3-gram = [ABC, DE, EFG, HI];
       in 4-gram = [ABCD, E, EFGH, I]
     
-    encode : encoding of your txt
+    3. encode : encoding of your txt
     
     
-    return:
-    --------
-    data_frame: pd.dataframe
-      a big data frame contain the information of proteins and its compositition
-    pd_dom: pd.dataframe
-      a data frame contain the information of domains
-    another_protein: pd.dataframe
+    ---Return
+    1. data_frame: pandas.DataFrame
+      a big data frame contains the information of proteins and its domains
+      
+    2. pd_dom: pandas.DataFrame
+      a data frame contains the information of domains
+    
+    3. another_protein: pandas.DataFrame
       a data frame contain the information of proteins
-    longest_L: int
+      
+    4. longest_L: int
       the biggest length of single protein.
     
     '''
@@ -374,28 +454,40 @@ def N_gram_info(file_name, N, encode = "UTF-8"):
     return data_frame, pd_dom, another_protein, longest_L    
 
 def write_to_excel(big, protein, dom, name):
-    """Write pandas dataFrame big, protein, dom to an excel file with the given filename
+    """Save pandas dataFrame big, protein, and dom as an excel file with the given filename
+    
+    ---Input
+    big, protein, dom: pandas.DataFrame
+        Return of info()
+    
+    
+    
+    ---Parameters
+    name: string
+        the name of excel file
+    
+    ---Output
+        an excel file contains big, protein, and dom
+    
     """
     writer = pd.ExcelWriter(name + '.xlsx')
-    big.to_excel(writer,'RRD')
-    protein.to_excel(writer,'protein')
-    dom.to_excel(writer,'domain')
+    big.to_excel(writer, 'RRD')
+    protein.to_excel(writer, 'protein')
+    dom.to_excel(writer, 'domain')
     writer.save()
 
-
 def geometric_sequence(protein, dom):
-    '''give geometric sequence {Hn} and {Vn}
+    '''give geometric sequence {Hn} and {Vm}
     
-    paras:
-    ---
-    protein, dom: pandas.DataFrame
-        the output of info    
-    
-    returns:
-    ---
-    H: ndarray
+    ---Parameters
+        protein, dom: pandas.DataFrame
+            the output of info ()   
+
+    ---Returns
+    1. H: ndarray
         the geometric sequence of horizontal lines
-    V: ndarray
+        
+    2. V: ndarray
         the sequence of vertical lines
       
     '''
@@ -413,46 +505,54 @@ def geometric_sequence(protein, dom):
         #ref: Count how many values in a list that satisfy certain condition
         SV = sum(1 for cf in protein['proteinFreq'] if cf == Vf[i])
         SVT = SVT + SV
-        V[i] = len(protein['proteinFreq']) - SVT + 1
+        V[i] = len(protein['proteinFreq']) - SVT
+    #we need to add total kinds of proteins as V_1    
     V[:0] = (max(protein['proteinRank']),)    
         
     for i in range(len(set(dom['domFreq']))):
         SH = sum(1 for wf in dom['domFreq'] if wf == Hf[i])
         SHT = SHT + SH
-        H[i] = len(dom['domFreq']) - SHT + 1
+        H[i] = len(dom['domFreq']) - SHT
+    #we need to add total kinds of domain as H_1
     H[:0] = (max(dom['domRank']),)
     
     return V, H
     
-
 def draw_RRD_plot(big, protein, dom, longest, name, V, H, need_line = 'Y', number_of_lines = 4, Color = '#ff0000', FORMAT = 'png', Path = ''):
     '''draw the RRD plot and auxiliary lines
     
-    Controllable parameters:
-    --- 
-    need_line: string
-        If you don't want the auxiliary lines, change Y into other thing.
-
-    number_of_lines: number
-        How many auxiliary lines you need ? (both horizontal and vertical lines)
-    Color: colorcode
-    FORMAT: string
-        The format of your RRD plot. Most backends support png, pdf, ps, eps and svg. 
-        else: just show plot instead of saving.
-    Path: file path for saving picture
-        Default: save at current document
+    ---Input
+    1. big, protein, dom, longest: pandas.DataFrame
+        the return of info()
     
-    Fixed parameters:
-    ---(please don't change them)
-    big, protein, dom, longest: pandas.DataFrame
-        the output of the function info()
-    H, V: ndarray
-        the output of the function check_const_ratio
+    2. H, V: ndarray
+        the return of geometric_sequence()
+    
+    ---Parameters
+    1. need_line: string
+        If you don't want the auxiliary lines, change Y into other strings.
+
+    2. number_of_lines: int
+        the number of auxiliary lines (both horizontal and vertical lines)
+    
+    3. Color: colorcode
+        the color of points on RRD
+    
+    4. FORMAT: string
+        The format of your plot. Most backends support png, pdf, ps, eps and svg. 
+        else: just show plot instead of saving.
+    
+    5. Path: file path for saving picture
+        Default: save at current document
+        if Path == np.nan, no figure will be saved (just show it)
+        else, the figure will be saved according to Path
+    
+    ---Return
+        coordinate: N*2 array, N = number of points
+            coordinate[i][0] = x coordinate, coordinate[i][1] = y coordinate
            
-    output:
-        1. show or save a RRD plot
-        2. coordinate: N*2 array, N = number of points
-                coordinate[i][0] = x coordinate, coordinate[i][1] = y coordinate
+    ---Output
+        show or save a RRD plot
             
     '''
     fig, ax = plt.subplots()   
@@ -464,7 +564,7 @@ def draw_RRD_plot(big, protein, dom, longest, name, V, H, need_line = 'Y', numbe
 
 
         for i in range(number_of_lines):
-            x_const = [V[i] for j in range(Slice_number)]#x_const =[V[i], V[i], ..., V[i]], Slice_number elements
+            x_const = [V[i] for j in range(Slice_number)] #x_const =[V[i], V[i], ..., V[i]], Slice_number elements
             y_const = [H[i] for j in range(Slice_number)] #y_const =[H[i], H[i], ..., H[i]], Slice_number elements
             plt.plot(x_range, y_const) #plot y=H[i] on RRD plot
             plt.plot(x_const, y_range) #plot x=V[i] on RRD plot   
@@ -486,17 +586,18 @@ def draw_RRD_plot(big, protein, dom, longest, name, V, H, need_line = 'Y', numbe
     ax.xaxis.set_major_formatter(formatter)
     ax.yaxis.set_major_formatter(formatter)
 
-    plt.xticks(fontsize = 15)
-    plt.yticks(fontsize = 15)
+    plt.xticks(fontsize = 20)
+    plt.yticks(fontsize = 20)
     #https://stackoverflow.com/questions/34227595/how-to-change-font-size-of-the-scientific-notation-in-matplotlib
-    ax.yaxis.offsetText.set_fontsize(15)
-    ax.xaxis.offsetText.set_fontsize(15)
+    ax.yaxis.offsetText.set_fontsize(20)
+    ax.xaxis.offsetText.set_fontsize(20)
 
-    plt.xlabel('protein', size = 15)
-    plt.ylabel('domain', size = 15)
+    plt.xlabel('protein', size = 25)
+    plt.ylabel('domain', size = 25)
     plt.xlim([0, max(protein['proteinRank'])*11/10])
     plt.ylim([0, max(dom['domRank'])*17/15])
     plt.title(name, size = 25)
+    plt.gcf().subplots_adjust(left = 0.17, bottom = 0.17)
     try:
         if Path == '':
             fig.savefig('RRD of ' + name + '.' + FORMAT, dpi = 400, format = FORMAT) 
@@ -508,36 +609,68 @@ def draw_RRD_plot(big, protein, dom, longest, name, V, H, need_line = 'Y', numbe
         plt.show()
     return coordinate
     
-def N_dom_dist(name, big, longest, FORMAT = 'png', Path = ''):
-    '''N-dom means there are N domains in one protein, it can be 1, 2, 3..., etc. This function can print their distribution
+def N_dom_dist(name, big, longest, density = True, FORMAT = 'png', Path = ''):
+    '''N-dom means there are N domains in one protein, it can be 1, 2, 3..., etc. 
+    This function can plot their distribution
     
-    Controllable parameters:
-    --- 
-    name: str
+    ---parameters
+    1. name: string
        "XXX" (your file name without filename extension)
-    FORMAT: string
-        The format of your N-dom plot. Most backends support png, pdf, ps, eps and svg.
     
-    Fixed parameters:
-    ---(please don't change them)
-    big, longest: pandas.DataFrame, int
-        the output of the function info()
+    2. density: boolean, True or False
+        If True, each bar will display its raw counts divided by the total number of counts.
+        (y_i = y_i0 / sum_i(y_i0), where y_i0 is the raw counts of i)
+        If False, each bar will display its raw counts.
     
-    Output:
-    ---
-        a N-dom distribution plot
+    3. FORMAT: string
+        The format of your plot. Most backends support png, pdf, ps, eps and svg. 
+        else: just show plot instead of saving.
+    
+    4. Path: file path for saving picture
+        Default: save at current document
+        if Path == np.nan, no figure will be saved (just show it)
+        else, the figure will be saved according to Path
+    
+    ---Input
+        big, longest: pandas.DataFrame, int
+            the output of the function info()
+            where big = info()[0] and longest = info()[3]
+    
+    ---Output
+        show or save a N-dom distribution plot
     
     '''
     N_dom = big["N_dom"]
-    fig, ax = plt.subplots()
-    plt.hist(N_dom, bins = longest, density = True)
+    freq = big["proteinFreq"]
+    N_dist = [0 for i in range(longest)]
+    bar_x = [str(i + 1) for i in range(longest)]
     
-    plt.xlabel('$N-domain$', size = 20)
-    plt.ylabel('$\\rho(N)$', size = 20)
-    ax.tick_params(axis='x', labelsize=15) 
-    ax.tick_params(axis='y', labelsize=15)
-    #https://matplotlib.org/api/_as_gen/matplotlib.axes.Axes.ticklabel_format.html
-    ax.ticklabel_format(axis='x', style='sci',scilimits=(0,3))
+    fig, ax = plt.subplots()
+    
+    for i in range(len(freq)):
+        N_dist[N_dom[i] - 1] += freq[i]
+    
+    if density == True:
+        #I don't write N_dist[N_dom[i] - 1] += freq[i]/tot because such calculation is not precise
+        tot = sum(freq)
+        
+        for i in range(len(N_dist)):
+            N_dist[i] = N_dist[i] / tot
+            
+        plt.bar(bar_x, N_dist, width = 1)
+        plt.ylabel('$\\rho_N$ (proportion)', size = 20)
+        
+        
+    elif density == False:
+        plt.bar(bar_x, N_dist, width = 1)
+        plt.ylabel('$\\rho_N$ (counts)', size = 20)
+        
+    else:
+        print('type error: "density" should be boolean (True or False)')
+    
+    plt.xlabel('$N-$domain', size = 20)
+    ax.tick_params(axis = 'x', labelsize = 15) 
+    ax.tick_params(axis = 'y', labelsize = 15)
     #https://stackoverflow.com/questions/6774086/why-is-my-xlabel-cut-off-in-my-matplotlib-plot
     plt.gcf().subplots_adjust(left = 0.17, bottom = 0.17)
     plt.title(name, size = 20)
@@ -552,9 +685,9 @@ def N_dom_dist(name, big, longest, FORMAT = 'png', Path = ''):
         plt.show()
 
 def which_plot(name, V, H, x = 'H', max_range = 50, shift = 'N', FORMAT = 'png', Path = ''):
-    '''check ratio of geometric sequence {Hn} or {Vn}
+    '''check ratio of geometric sequence {Hn} or {Vm}
 
-       parameters:
+    ---Parameters
     1. name: str
        "XXX" (your file name without filename extension)
 
@@ -570,7 +703,21 @@ def which_plot(name, V, H, x = 'H', max_range = 50, shift = 'N', FORMAT = 'png',
     4. x: 'H' or 'V'
         you can chose the sequence you want (H/V)
 
-    5. FORMAT: png, pdf, ps, eps and svg
+    5. FORMAT: string
+        The format of your plot. Most backends support png, pdf, ps, eps and svg. 
+        else: just show plot instead of saving.
+    
+    6. Path: file path for saving picture
+        Default: save at current document
+        if Path == np.nan, no figure will be saved (just show it)
+        else, the figure will be saved according to Path
+        
+    ---Output
+        a figure of {H_n}, or {V_m}, depend on the x = 'H' or 'V'
+    
+    ---Return
+        mean, standard error, and shift: float
+            statistical quantities of the ratio of {H} or {V}
     '''
     
     if x == 'H':
@@ -619,7 +766,7 @@ def which_plot(name, V, H, x = 'H', max_range = 50, shift = 'N', FORMAT = 'png',
         ax.tick_params(axis='x', labelsize=15) 
         ax.tick_params(axis='y', labelsize=15)
         plt.gcf().subplots_adjust(left = 0.17, bottom = 0.17)
-        plt.xlabel('$\ell$ for $H_{\ell+1}/H_{\ell}$', size = 20)
+        plt.xlabel('$n$ for $H_{n+1}/H_{n}$', size = 20)
         plt.ylabel('$r_H$', size = 20)
         plt.ylim([0, max(r) + 0.1])
         plt.plot(r_position, r, 'ro')        
@@ -678,7 +825,7 @@ def which_plot(name, V, H, x = 'H', max_range = 50, shift = 'N', FORMAT = 'png',
         ax.tick_params(axis='x', labelsize=15) 
         ax.tick_params(axis='y', labelsize=15)
         plt.gcf().subplots_adjust(left = 0.17, bottom = 0.17)
-        plt.xlabel('$m$ for $V_{m+1}/H_{m}$', size = 20)
+        plt.xlabel('$m$ for $V_{m+1}/V_{m}$', size = 20)
         plt.ylabel('$r_V$', size = 20)
         plt.ylim([0, max(r) + 0.1])
         plt.plot(r_position, r, 'ro')        
@@ -699,7 +846,7 @@ def which_plot(name, V, H, x = 'H', max_range = 50, shift = 'N', FORMAT = 'png',
 def FRD_plot(name, protein, dom, x_pos = 2, y_pos = 10, FORMAT = 'png', Path = ''):
     '''draw FRD plot of proteins and domains
 
-       parameters:
+    ---Parameters
     1. name: str
        "XXX" (your file name without filename extension)
 
@@ -712,14 +859,31 @@ def FRD_plot(name, protein, dom, x_pos = 2, y_pos = 10, FORMAT = 'png', Path = '
        (x_position, y_position) of your formula on FRD plot
 
     4. FORMAT: string
-        The format of your RRD plot. Most backends support png, pdf, ps, eps and svg. 
+        The format of your plot. Most backends support png, pdf, ps, eps and svg. 
         else: just show plot instead of saving.
     
     5. Path: file path for saving picture
         Default: save at current document
+        if Path == np.nan, no figure will be saved (just show it)
+        else, the figure will be saved according to Path
     
-        output:
-    (C, s): normalized coeffecient and exponent for P(x)=Cx^s
+    ---Output
+        save or show a figure of FRD
+    
+    ---Return:
+        FRD_protein: dict, where
+        (1) FRD_protein['ab']: tuple (a_Z, b_Z)
+                parameters of P(x, b) = a_Z * x^(-b_Z)
+        (2) FRD_protein['b_jac']: tuple
+                gradient vector used for optimization
+        (3) FRD_protein['neg_L']: float
+                negative max liklihood. 
+                details see Curve_Fitting_MLE.py > L_Zipf_Mandelbrot()
+        (4) FRD_protein['length']: int
+                total number of proteins in the txt
+        (5) FRD_protein['V_1'] = int
+                total kinds of proteins in the txt
+                
     '''
     wf = protein['proteinFreq']
     cf = dom['domFreq']
@@ -728,57 +892,70 @@ def FRD_plot(name, protein, dom, x_pos = 2, y_pos = 10, FORMAT = 'png', Path = '
 
     #use MLE to get the fitting parameter, detial read: Curve_Fitting_MLE
     #-----------------------------------------
+    #T = ([proteinRank], [proteinFreq])
     T = ([],[])
     for i in protein['proteinRank']:
         T[0].append(i)
     for i in wf:
         T[1].append(i)
-    #T = ([proteinRank], [proteinFreq])
+        
     Y = Two_to_One(T)
-    res = minimize(L_Zipf, 1.2, Y, method = 'SLSQP')
-    s = res['x']
-    t = [int(min(T[0])), int(max(T[0])), s]
-    C = 1 / incomplete_harmonic(t)
-    fig, ax = plt.subplots()
-    plt.xlabel('rank', size = 20)
-    plt.ylabel('frequency', size = 20)
-    plt.title(name, fontsize = 25)
-
+    
     xdata = np.linspace(min(T[0]), max(T[0]), num = (max(T[0]) - min(T[0]))*10)
-    theo = Zipf_law(xdata, s, C) #Notice theo is normalized, i.e, the probability density
-    N = sum(T[1])
-    theo = [N * i for i in theo] #change theo from probability density to real frequency
+    
+    #Estimate exponent. This action can make reduce the error of initial value guess.
+    freq_M, freq_m = max(T[1]), min(T[1])
+    rank_M, rank_m = max(T[0]), min(T[0])
+    b_0 = np.log(freq_M / freq_m) / np.log(rank_M / rank_m)
+
+    #fit Zipf: P(x, b)=a_Z/x^b_Z
+    res_Z = minimize(L_Zipf, b_0, Y)
+    b_Z = float(res_Z['x'])
+    t_Z = (int(min(T[0])), int(max(T[0])), b_Z)
+    a_Z = float(1 / incomplete_harmonic(t_Z))
+    
+    #change theo from probability density to real frequency
+    L = sum(T[1]) #total number of proteins in the txt
+    theo_Z = L * Zipf_law(xdata, a_Z, b_Z)
+    
+    #save the parameters as the return of FRD_plot()
+    FRD_protein = {}
+    FRD_protein['ab'] = (a_Z, b_Z)
+    FRD_protein['b_jac'] = tuple(res_Z.get('jac'))
+    FRD_protein['neg_L'] = res_Z.get('fun')
+    FRD_protein['length'] = L
+    FRD_protein['V_1'] = max(T[0])
+    #-----------------------------------------
+    fig, ax = plt.subplots()
     
     #plt.text(x_position, y_position)
     if (x_pos, y_pos) == (0,0):
         x_mid = 1.2
         y_min = 0.2
-        plt.text(x_mid, y_min,'$%.3fx^{-%.2f}$'%(C, s), fontsize=40) #write formula on the plot
+        plt.text(x_mid, y_min,'$b=-%.2f$'% b_Z, fontsize = 40) #write formula on the plot
     else:
-        plt.text(x_pos, y_pos,'$%.3fx^{-%.2f}$'%(C, s), fontsize=40) #write formula on the plot
+        plt.text(x_pos, y_pos,'$b=-%.2f$'% b_Z, fontsize = 40) #write formula on the plot
     
         
-    plt.plot(xdata, theo, 'g-')
-    #-----------------------------------------
+    plt.plot(xdata, theo_Z, 'g-')
+    
     plt.ylim([0.1, 10*max(max_wf, max_cf)])
-    plt.yscale('log')
-    plt.xscale('log')
     plt.plot(wf, 'ro', label = 'protein', markersize=4)
-    plt.plot(cf, 'x', label = 'dom', markersize=6)
+    plt.plot(cf, 'x', label = 'domain', markersize=6)
     plt.legend(loc = 'best', prop={'size': 20})
     
-    #https://atmamani.github.io/cheatsheets/matplotlib/matplotlib_2/
-    formatter = ticker.ScalarFormatter(useMathText=True) 
-    formatter.set_scientific(True) 
-    formatter.set_powerlimits((-1,1))
-    ax.xaxis.set_major_formatter(formatter)
-    ax.yaxis.set_major_formatter(formatter) 
+    plt.xlabel('Rank', size = 25)
+    plt.ylabel('Frequency', size = 25)
     
-    #https://stackoverflow.com/questions/34227595/how-to-change-font-size-of-the-scientific-notation-in-matplotlib
-    ax.xaxis.offsetText.set_fontsize(15)
-    ax.yaxis.offsetText.set_fontsize(15) 
-    plt.xticks(fontsize = 15)
-    plt.yticks(fontsize = 15)
+    plt.xscale('log')
+    plt.yscale('log')
+    plt.xticks(fontsize = 20)
+    plt.yticks(fontsize = 20)
+    plt.title(name, fontsize = 25)
+    
+    #https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.tick_params.html
+    plt.tick_params(which = 'major', length = 10)
+    plt.tick_params(which = 'minor', length = 4)
     
     #https://stackoverflow.com/questions/6774086/why-is-my-xlabel-cut-off-in-my-matplotlib-plot
     plt.gcf().subplots_adjust(left = 0.17, bottom = 0.17)
@@ -791,10 +968,10 @@ def FRD_plot(name, protein, dom, x_pos = 2, y_pos = 10, FORMAT = 'png', Path = '
             plt.close()
     except:
         plt.show()
-    return (C, s)
+    return FRD_protein
 
 def draw_density_plot(cooridnate_x, cooridnate_y, slice_number):
-    """input cooridnate of datapoints
+    """Input cooridnate of datapoints
        draw a density diagram and slice it into slice_number pieces. 
     """
     xx = cooridnate_x
@@ -809,14 +986,14 @@ def read_file_generate_fake_constraint(constraint = 5, dom_num = 2, out_file =  
     the output script share the same lenth dom_num
     """
     CONSTRAINT = constraint
-    SAMPLE_PROTEIN_NUM = sample_protein_num
+    SAMPLE_protein_NUM = sample_protein_num
     ALPHA = alpha
-    NUM_PROTEIN_IN_NOV = num_protein_in_fake_scrip
+    NUM_protein_IN_NOV = num_protein_in_fake_scrip
     OUTPUT_FILE_NAME = out_file
     NOUN = noun
-    DOM_NUM = dom_num
+    dom_NUM = dom_num
     
-    zipf_gen =  ZipfGenerator(SAMPLE_PROTEIN_NUM,ALPHA)
+    zipf_gen =  ZipfGenerator(SAMPLE_protein_NUM,ALPHA)
     f =  open("roc2.txt","r")
 
     world_list = []
@@ -827,7 +1004,7 @@ def read_file_generate_fake_constraint(constraint = 5, dom_num = 2, out_file =  
             if 'N' in line_split[4]:
                 world_list.append(line_split[3])
         else:
-            #if len(line_split[3]) == DOM_NUM:
+            #if len(line_split[3]) == dom_NUM:
                 world_list.append(line_split[3])
 
     f.close()
@@ -852,7 +1029,7 @@ def read_file_generate_fake_constraint(constraint = 5, dom_num = 2, out_file =  
     
     list_2 = []
     tmp = ''
-    for i in range(SAMPLE_PROTEIN_NUM):
+    for i in range(SAMPLE_protein_NUM):
         for j in range(dom_num):
             c = random.choice(tmp_list)
             dom_count_dic[c] += 1
@@ -876,7 +1053,7 @@ def read_file_generate_fake_constraint(constraint = 5, dom_num = 2, out_file =  
     small_world_list = world_list[:]
     target_string_list = []
 
-    for i in range(NUM_PROTEIN_IN_NOV):
+    for i in range(NUM_protein_IN_NOV):
         num = zipf_gen.next()
         w = small_world_list[num]
         target_string_list.append(w+" ")
@@ -903,14 +1080,14 @@ def read_file_generate_fake(dom_num = 2, out_file =  'fake1.txt', sample_protein
     """Read "roc2.txt" file, and then generate a fake script satisfying Zipfs' law. All the proteins in 
     the output script share the same lenth dom_num
     """
-    SAMPLE_PROTEIN_NUM = sample_protein_num
+    SAMPLE_protein_NUM = sample_protein_num
     ALPHA = alpha
-    NUM_PROTEIN_IN_NOV = num_protein_in_fake_scrip
+    NUM_protein_IN_NOV = num_protein_in_fake_scrip
     OUTPUT_FILE_NAME = out_file
     NOUN = noun
-    DOM_NUM = dom_num
+    dom_NUM = dom_num
     
-    zipf_gen =  ZipfGenerator(SAMPLE_PROTEIN_NUM,ALPHA)
+    zipf_gen =  ZipfGenerator(SAMPLE_protein_NUM,ALPHA)
     f =  open("roc2.txt","r")
 
     world_list = []
@@ -921,7 +1098,7 @@ def read_file_generate_fake(dom_num = 2, out_file =  'fake1.txt', sample_protein
             if 'N' in line_split[4]:
                 world_list.append(line_split[3])
         else:
-            #if len(line_split[3]) == DOM_NUM:
+            #if len(line_split[3]) == dom_NUM:
                 world_list.append(line_split[3])
 
     f.close()
@@ -956,10 +1133,10 @@ def read_file_generate_fake(dom_num = 2, out_file =  'fake1.txt', sample_protein
     print("A corpus is successfully loaded.")
     
     random.shuffle(world_list)
-    small_world_list = world_list[-SAMPLE_PROTEIN_NUM:]
+    small_world_list = world_list[-SAMPLE_protein_NUM:]
     target_string_list = []
 
-    for i in range(NUM_PROTEIN_IN_NOV):
+    for i in range(NUM_protein_IN_NOV):
         num = zipf_gen.next()
         w = small_world_list[num]
         target_string_list.append(w+" ")
