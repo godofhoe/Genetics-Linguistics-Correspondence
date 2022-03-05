@@ -70,16 +70,16 @@ def Allo_plot(name, syl, x_pos = 0, y_pos = 0, FORMAT = 'png', Path = ''):
 
     ---Input
     1. name: str
-       "XXX" (your file name without filename extension)
+        "XXX" (your file name without filename extension)
 
     2. syl: pd.daframe
-       output of function info() or N_gram_info() in count.py
-       you should get them from
-       big, syl, word, longest = info(filename, encode)
-    
+        output of function info() or N_gram_info() in count.py
+        you should get them from
+        big, syl, word, longest = info(filename, encode)
+
     ---Parameters
     1. x_pos, y_pos : float
-       (x_position, y_position) of your formula on FRD plot
+        (x_position, y_position) of your formula on FRD plot
 
     2. FORMAT: string
         The format of your plot. Most backends support png, pdf, ps, eps and svg. 
@@ -88,12 +88,14 @@ def Allo_plot(name, syl, x_pos = 0, y_pos = 0, FORMAT = 'png', Path = ''):
     3. Path: file path for saving picture
         Default: save at current document
         if Path == np.nan, no figure will be saved (just show it)
-    
+        else, the figure will be saved according to Path
+        
     ---Output
-       figure of allocation distribution
+        figure of allocation distribution
     
     ---Return
-       (A, B): fitting parameters of Allo
+        Allo_fit: tuple (A, B), (float, float)
+            fitting parameters of Allo(y') = (-A ln y' + B)^2
     '''
     Syl = syl.sort_values(by = '#allocations', ascending=False)
     reSyl = Syl.reset_index()
@@ -124,19 +126,23 @@ def Allo_plot(name, syl, x_pos = 0, y_pos = 0, FORMAT = 'png', Path = ''):
     A = format(abs(popt[0]), '#.%dg' % a_dig)  # give a_dig significant digits
     B = format(popt[1], '#.%dg' % b_dig)  # give b_dig significant digits
     if 'e' in A: #make scientific notation more beautiful
-        A = A.split('e')[0] + '\\times 10^{' + str(int(A.split('e')[1])) + '}'
-    if A[-1] == '.':
-        A = A[:-1]
+        A_text = A.split('e')[0] + '\\times 10^{' + str(int(A.split('e')[1])) + '}'
+    elif A[-1] == '.':
+        A_text = A[:-1]
+    else:
+        A_text = A
     if 'e' in B: #make scientific notation more beautiful
-        B = B.split('e')[0] + '\\times 10^{' + str(int(B.split('e')[1])) + '}'
-    if B[-1] == '.':
-        B = B[:-1]
+        B_text = B.split('e')[0] + '\\times 10^{' + str(int(B.split('e')[1])) + '}'
+    elif B[-1] == '.':
+        B_text = B[:-1]
+    else:
+        B_text = B
         
     #a perfect solution to text wrap!!
     #https://stackoverflow.com/questions/2660319/putting-newline-in-matplotlib-label-with-tex-in-python
     parameters = (r"$\alpha=%s$"
                   "\n"
-                 r"$\beta=%s$") % (A, B)    
+                 r"$\beta=%s$") % (A_text, B_text)    
     
     a = 1.5  #auto positioning for m = min(syl['sylRank']) = 1 always
     b = 2   #auto positioning for M = max(syl['sylRank'])
@@ -170,23 +176,24 @@ def Allo_plot(name, syl, x_pos = 0, y_pos = 0, FORMAT = 'png', Path = ''):
     except:
         plt.show()
     
-    return (A, B)
+    Allo_fit = (float(A), float(B))
+    return Allo_fit
         
 def Chain_plot(name, word, x_pos = 0, y_pos = 0, FORMAT = 'png', Path = ''):
     '''draw allocation-rank plot 
 
     ---Input
     1. name: str
-       "XXX" (your file name without filename extension)
+        "XXX" (your file name without filename extension)
 
     2. word: pd.daframe
-       output of function info() or N_gram_info() in count.py
-       you should get them from
-       big, syl, word, longest = info(filename, encode)
+        output of function info() or N_gram_info() in count.py
+        you should get them from
+        big, syl, word, longest = info(filename, encode)
     
     ---Parameters
     1. x_pos, y_pos : float
-       (x_position, y_position) of your formula on FRD plot
+        (x_position, y_position) of your formula on FRD plot
 
     2. FORMAT: string
         The format of your plot. Most backends support png, pdf, ps, eps and svg. 
@@ -195,12 +202,15 @@ def Chain_plot(name, word, x_pos = 0, y_pos = 0, FORMAT = 'png', Path = ''):
     3. Path: file path for saving picture
         Default: save at current document
         if Path == np.nan, no figure will be saved (just show it)
+        else, the figure will be saved according to Path
     
     ---Output
-       figure of chain distribution
+        figure of chain distribution
     
     ---Return
-       (A, B): fitting parameters of Chain
+        Chain_fit: tuple (A, B, U_Chain), (float, float, int)
+            A, B are fitting parameters of Chain(x') = -A ln x' + B
+            U_Chain denotes the the least upper bound of Chain
     '''
     Word = word.sort_values(by='#chains', ascending=False)
     reWord = Word.reset_index()
@@ -233,19 +243,23 @@ def Chain_plot(name, word, x_pos = 0, y_pos = 0, FORMAT = 'png', Path = ''):
     A = format(abs(popt[0]), '#.%dg' % a_dig)  # give a_dig significant digits
     B = format(popt[1], '#.%dg' % b_dig)  # give b_dig significant digits
     if 'e' in A: #make scientific notation more beautiful
-        A = A.split('e')[0] + '\\times 10^{' + str(int(A.split('e')[1])) + '}'
-    if A[-1] == '.':
-        A = A[:-1]
+        A_text = A.split('e')[0] + '\\times 10^{' + str(int(A.split('e')[1])) + '}'
+    elif A[-1] == '.':
+        A_text = A[:-1]
+    else:
+        A_text = A
     if 'e' in B: #make scientific notation more beautiful
-        B = B.split('e')[0] + '\\times 10^{' + str(int(B.split('e')[1])) + '}'
-    if B[-1] == '.':
-        B = B[:-1]    
+        B_text = B.split('e')[0] + '\\times 10^{' + str(int(B.split('e')[1])) + '}'
+    elif B[-1] == '.':
+        B_text = B[:-1]
+    else:
+        B_text = B
     
     #a perfect solution to text wrap!!
     #https://stackoverflow.com/questions/2660319/putting-newline-in-matplotlib-label-with-tex-in-python
     parameters = (r"$\gamma=%s$"
                   "\n"
-                 r"$\omega=%s$") % (A, B)    
+                 r"$\omega=%s$") % (A_text, B_text)    
     
     a = 1.5  #auto positioning for m = min(syl['sylRank']) = 1 always
     b = 2   #auto positioning for M = max(syl['sylRank'])
@@ -278,5 +292,7 @@ def Chain_plot(name, word, x_pos = 0, y_pos = 0, FORMAT = 'png', Path = ''):
             plt.close()
     except:
         plt.show()
-        
-    return (A, B)
+    
+    Chain_fit = (float(A), float(B))
+    U_Chain = max(reWord['#chains'])
+    return Chain_fit, U_Chain

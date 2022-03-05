@@ -180,7 +180,7 @@ def left_upper(m, n, V, H, points, num_section, delta, percent):
         
         
         ##Second operation: examine the local concavity and convexity
-        #divide {m+i, n+i} into num_section parts (default: num_section = 10)
+        #divide {m+i, n+i} into num_section parts (default: num_section = 2)
         if type(num_section) == int:
             section_length = (V[m+i-1] - V[m+i]) / num_section
         
@@ -438,8 +438,16 @@ def plot_g(L, V, H, big, name, longest, toler = 50, num_part = 50, num_section =
             luptx, lupty = px, py
         else:
             luptx, lupty = DENOISE(m, n, V, H, points, toler, num_section, delta, percent)
-        glu['g' + str(n)] = (luptx, lupty)
+        
+        #----Develope note
+        #I use list instead of array here (luptx and lupty is array)
+        #since literal_eval can only read dictionary like {'g1': [], 'g2': []} 
+        #it cannot read mixing type such as {'g1': [], 'g2': array([])} 
+        #----
+        
+        glu['g' + str(n)] = (list(luptx), list(lupty))
         plt.plot(luptx, lupty,'.' ,markersize = '4', color = '#e9bf53')
+        
         #coarse-grain
         Range = [0.25*V[0], V[0]]
         x_avg, y_avg = coarse_grain(luptx, lupty, Range, num_part)
@@ -473,19 +481,23 @@ def rg(name, g, FORMAT, Path = ''):
     3. Path: file path for saving picture
         Default: save at current document
         if Path == np.nan, no figure will be saved (just show it)
+        else, the figure will be saved according to Path
        
     ---Output
         figure including information about R and error
     
     ---Return
-        Rg = (R, ERROR, R_dist), a 3-D tuple
+        Rg = (R, ERROR, R_dist, S_value*C_value), a 4-D tuple
             where
             Rg[0] = R: avg of g_(k+1)/g_k for all k
             Rg[1] = error: standard error for g_(k+1)/g_k
             Rg[2] = R_dist: record g_(k+1)/g_k for every x withour NAN
-
+            Rg[3] = S_value*C_value: SC value, a index to guage the goodness of scaling structure
+        
+        ps:
             Rg[0] and Rg[1] are used to calculate SC value, 
-            while Rg[2] can conut the distribution of r_g (for future researches, such as error distribution)
+            Rg[2] can conut the distribution of r_g (for future researches, such as error distribution),
+            Rg[3] is SC value
     '''
     num_part = max([len(g[i][0]) for i in g])
     len_g = len(g)
@@ -501,7 +513,7 @@ def rg(name, g, FORMAT, Path = ''):
         y[gk1 + '/' + gk] = [g[gk1][1][j]/g[gk][1][j] for j in range(num_part)]
         x[gk1 + '/' + gk] = [0.5*g[gk1][0][j] + 0.5*g[gk][0][j] for j in range(num_part)]
         
-        y_k = [i for i in y[gk1 + '/' + gk] if i==i] # this is y without NAN
+        y_k = [i for i in y[gk1 + '/' + gk] if i == i] # this is y without NAN
         R_dist[gk1 + '/' + gk] = y_k
         STD[gk1 + '/' + gk] = round(np.std(y_k), 3)
         weight[gk1 + '/' + gk] = len(y_k)
@@ -551,11 +563,11 @@ def rg(name, g, FORMAT, Path = ''):
     plt.text(xmax*0.9, ymax*0.05, '$SC=%.3f$' % (S_value*C_value), **kwargs)
     plt.xlabel('$x$', size = 20)
     plt.ylabel('$r_g(x)$', size = 20)
-    ax.tick_params(axis='x', labelsize=15)
-    ax.tick_params(axis='y', labelsize=15)
+    ax.tick_params(axis = 'x', labelsize = 15)
+    ax.tick_params(axis = 'y', labelsize = 15)
     #https://matplotlib.org/api/_as_gen/matplotlib.axes.Axes.ticklabel_format.html
     #https://atmamani.github.io/cheatsheets/matplotlib/matplotlib_2/
-    formatter = ticker.ScalarFormatter(useMathText=True)
+    formatter = ticker.ScalarFormatter(useMathText = True)
     formatter.set_powerlimits((-1,1)) 
     ax.xaxis.set_major_formatter(formatter) 
     #https://stackoverflow.com/questions/34227595/how-to-change-font-size-of-the-scientific-notation-in-matplotlib
@@ -574,7 +586,7 @@ def rg(name, g, FORMAT, Path = ''):
             plt.close()
     except:
         plt.show()
-    return (R, ERROR, R_dist)
+    return (R, ERROR, R_dist, S_value*C_value)
 
 def scaling_fit(data, Rg_0, V, H, Zipf, name, FORMAT = 'pdf', Path = ''):
     '''find out best fitting curve for scaling lines
@@ -599,7 +611,10 @@ def scaling_fit(data, Rg_0, V, H, Zipf, name, FORMAT = 'pdf', Path = ''):
         Instead of Rg_0, you can try RH_0 = RH[0] (but fitting performance is bad)
         where RH = which_plot(), RH[0] = mean, RH[1] = std, and RH[2] = shift
         
-    3. Zipf: tuple (c, s), where C is the leading coffecient and s is the exponent of frequency-rank distribution of word
+    3. Zipf: tuple (a, b), parameters for P(x, b) = a/x^b
+        where P(x, b) is the frequency-rank distribution of word.
+        This is one of the return of count.py > FRD_plot(). 
+        (a, b) = FRD_word['ab']
     
     ---Parameters
     1. FORMAT: string
@@ -609,20 +624,26 @@ def scaling_fit(data, Rg_0, V, H, Zipf, name, FORMAT = 'pdf', Path = ''):
     2. Path: file path for saving picture
         Default: save at current document
         if Path == np.nan, no figure will be saved (just show it)
+        else, the figure will be saved according to Path
     
     ---Output
         a picture with best fitting curve
     
     ---Return
-        fit_para[best]: return of curve_fit()
-            fitting parameters of scaling function for the best basis
-            fit_para[best][0] contains q and C of fun_theory(x, q, C)
-            see innner function > fun_theory()
-            
-            for curve_fit(),
-            see scipy.optimize.curve_fit for data structure
-            #url = https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.curve_fit.html
-        
+        fit_para_best: dict, {'popt', 'pcov', 'score'}
+            (1) popt, pcov: 2-D list, 2*2-D list
+                    they come from popt, pcov = curve_fit()
+                    fitting parameters of scaling function for the best basis
+                    popt (parameters optimization) contains q and C of fun_theory(x, q, C)
+                    pcov (parameters covariance) contains the covariance
+                    see innner function > fun_theory()
+
+                    for curve_fit(),
+                    see scipy.optimize.curve_fit for data structure
+                    #url = https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.curve_fit.html
+            (2) score: float
+                    The goodness of fitting
+                    see Sec. X in SI for detals
     
     '''
     fig, ax = plt.subplots()
@@ -644,24 +665,24 @@ def scaling_fit(data, Rg_0, V, H, Zipf, name, FORMAT = 'pdf', Path = ''):
     def fun_theory(x, q, C):
         '''theory of scaling curve                
         '''
-        return q*Rg_0**(C * (x**-Zipf[1]))
-    
-    def fun(x, q, s):
-        '''power law fit
-        '''
-        return q*x**s
-    #---innner function
+        return q * Rg_0**(C * (x**-Zipf[1]))
+    #------------------
     
     number = len(data) #number of scaling lines need fitting
     q0 = (100, 0.5) #initial guess
     fit_para = {}
     tot_Dev = {}
+    
+    #change data[gk] = [[x...], [y...]] to array([[x...], [y...]]) so that fun_theory(data[gk]) can work
+    for gk in data:
+        data[gk] = np.array(data[gk])
+    
     for gk in data:
         if gk != 'g1':           
             theo = {}
             Dev = {}
             #popt is the optimal values for the parameters (q, s, t)
-            popt, pcov = curve_fit(fun_theory, data[gk][0], data[gk][1], q0, bounds =(0, [np.inf, np.inf]))
+            popt, pcov = curve_fit(fun_theory, data[gk][0], data[gk][1], q0, bounds = (0, [np.inf, np.inf]))
             fit_para[gk] = (popt, pcov)   
             k = int(gk.split('g')[1]) #ex: gk = 'g2' then k = 2
             for i in range(2, number + 1):
@@ -676,7 +697,8 @@ def scaling_fit(data, Rg_0, V, H, Zipf, name, FORMAT = 'pdf', Path = ''):
     
     for i in range(1, number + 1):
         Gi = 'g' + str(i)
-        theo[Gi] = fun_theory(data[Gi][0], *fit_para[best][0]) * Rg_0**(i - k_best) #ex: k_best=2, i=1 then theo['g1] = Rg^(-1)* fun
+        #ex: k_best=2, i=1 then theo['g1] = Rg^(-1)* fun
+        theo[Gi] = fun_theory(data[Gi][0], *fit_para[best][0]) * Rg_0**(i - k_best) 
         plt.plot(data[Gi][0], data[Gi][1], '.', markersize = '4', color ='#e9bf53')
         plt.plot(data[Gi][0], theo[Gi], 'o', markersize = '4')
     xm, xM = plt.xlim([0,V[0]*1.03])
@@ -699,7 +721,8 @@ def scaling_fit(data, Rg_0, V, H, Zipf, name, FORMAT = 'pdf', Path = ''):
     plt.ylabel('syllagram', size = 15)  
     plt.title(name, size = 20)
     
-    #the following part is used to calculate fitting score, base on an empirical truth that good fitting use less data
+    #the following part is used to calculate fitting score, based on an empirical truth that good fitting use less data
+    #See Sec. IX in SI
     dx_min = {i : min(data[i][0]) for i in data} #find minima x in data
     if (V[0] - dx_min[min(dx_min)]) < 0.75*V[0]:
         score = 1
@@ -707,8 +730,8 @@ def scaling_fit(data, Rg_0, V, H, Zipf, name, FORMAT = 'pdf', Path = ''):
         score = (0.75*V[0])/(V[0] - dx_min[min(dx_min)])
     else:
         score = 0.5    
-    
-    plt.text(0.05*xM, 0.16*yM, 'fitting score: %.3f' % score, fontsize=24, color ='black')
+        
+    plt.text(0.05*xM, 0.16*yM, '$G$ = %.3f' % score, fontsize = 24, color ='black')
        
     try:
         if Path == '':
@@ -719,7 +742,13 @@ def scaling_fit(data, Rg_0, V, H, Zipf, name, FORMAT = 'pdf', Path = ''):
             plt.close()
     except:
         plt.show()
-    return fit_para[best]
+        
+    fit_para_best = {}
+    fit_para_best['popt'] = list(fit_para[best][0])
+    fit_para_best['pcov'] = [list(a) for a in fit_para[best][1]]
+    fit_para_best['score'] = score
+
+    return fit_para_best
 
 def fit_with_cut(data, Rg_0, V, H, Zipf, name, FORMAT, Path = ''):
     '''fit data bigger than 0.25*V[0] to rise accuracy of fitting
@@ -735,7 +764,10 @@ def fit_with_cut(data, Rg_0, V, H, Zipf, name, FORMAT, Path = ''):
         Instead of Rg_0, you can try RH_0 = RH[0] (but fitting performance is bad)
         where RH = which_plot(), RH[0] = mean, RH[1] = std, and RH[2] = shift
         
-    3. Zipf: tuple (c, s), where C is the leading coffecient and s is the exponent of frequency-rank distribution of word
+    3. Zipf: tuple (a, b), parameters for P(x, b) = a/x^b
+        where P(x, b) is the frequency-rank distribution of word.
+        This is one of the return of count.py > FRD_plot(). 
+        (a, b) = FRD_word['ab']
     
     ---Parameters
     1. FORMAT: string
@@ -745,6 +777,7 @@ def fit_with_cut(data, Rg_0, V, H, Zipf, name, FORMAT, Path = ''):
     2. Path: file path for saving picture
         Default: save at current document
         if Path == np.nan, no figure will be saved (just show it)
+        else, the figure will be saved according to Path
     
     ---Output
         an fitted plot that has fitting score

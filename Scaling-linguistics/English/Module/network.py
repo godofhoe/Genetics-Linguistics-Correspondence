@@ -116,7 +116,8 @@ def plot_cluster_block(name, cluster_block, FORMAT = 'pdf', Path = ''):
     
     4. Path: file path for saving picture
         Default: save at current document
-        if Path == np.nan, no figure will be saved (just show it) 
+        if Path == np.nan, no figure will be saved (just show it)
+        else, the figure will be saved according to Path
         
     ---Output
         save or show a figure of local clustering coefficient and cumulative probability of block layer
@@ -164,7 +165,8 @@ def plot_cluster_compo(name, cluster_compo, FORMAT = 'pdf', Path = ''):
     
     4. Path: file path for saving picture
         Default: save at current document
-        if Path == np.nan, no figure will be saved (just show it) 
+        if Path == np.nan, no figure will be saved (just show it)
+        else, the figure will be saved according to Path
         
     ---Output
         save or show a figure of local clustering coefficient and cumulative probability of block layer
@@ -232,6 +234,39 @@ def plot_degree_block(name, block_degree_sequence, FORMAT = 'pdf', Path = ''):
         plt.show()
 
 def plot_degree_compo(name, compo_degree_sequence, FORMAT = 'pdf', Path = ''):
+    '''draw degree distribution of component network
+
+    ---Parameters
+    1. name: str
+       "XXX" (your file name without filename extension)
+
+    2. compo_degree_sequence: list
+       one return of build_edge()
+       
+
+    3. FORMAT: string
+        The format of your plot. Most backends support png, pdf, ps, eps and svg. 
+        else: just show plot instead of saving.
+    
+    4. Path: file path for saving picture
+        Default: save at current document
+        if Path == np.nan, no figure will be saved (just show it)
+        else, the figure will be saved according to Path
+    
+    ---Output
+        save or show a figure of degree distribution
+    
+    ---Return:
+        degree_component: dict, where
+        (1) degree_component['abc']: tuple (a_ZM, b_ZM, c_ZM)
+                parameters of P(x, b, c) = a_ZM*(x + c_ZM)^-b_ZM
+        (2) degree_component['bc_jac']: tuple
+                gradient vector used for optimization
+        (3) degree_component['neg_L']: float
+                negative max liklihood. 
+                details see Curve_Fitting_MLE.py > L_Zipf_Mandelbrot()
+        
+    '''
     #use MLE to get the fitting parameter, detial read: Curve_Fitting_MLE
     D = count_frequency(compo_degree_sequence)
     #T = ([degree], [degreeFreq]) #we don't fit those which degree = 0
@@ -241,61 +276,67 @@ def plot_degree_compo(name, compo_degree_sequence, FORMAT = 'pdf', Path = ''):
             T[0].append(i)
             T[1].append(D[i])
     Y = Two_to_One(T)
-
+    
     xdata = np.linspace(min(T[0]), max(T[0]), num = (max(T[0]) - min(T[0]))*10)
+    
+    #Estimate exponent. This action can make reduce the error of initial value guess.
+    freq_M, freq_m = max(T[1]), min(T[1])
+    rank_M, rank_m = max(T[0]), min(T[0])
+    b_0 = np.log(freq_M / freq_m) / np.log(rank_M / rank_m)
 
-    #y(x) = Cx^(-s)
-    #res = minimize(L_Zipf, (3), Y, method = 'CG')
-    #s = res['x'][0]
-    #t = [int(min(T[0])), int(max(T[0])), s]
-    #C = 1 / incomplete_harmonic(t)
-    #theo = Zipf_law(xdata, s, C) #Notice theo is normalized, i.e, the probability density
-
-
-    #y(x) = C(x + a)^(-s)
-    res = minimize(L_Zipf_Mandelbrot, (3, 0), Y, method = 'CG')
-    s = res['x'][0]
-    t = [int(min(T[0])), int(max(T[0])), s]
-    a = res['x'][1]
-    C = 1 / incomplete_shifted_harmonic(t, a)
-    theo = Zipf_Mandelbrot(xdata, s, C, a) #Notice theo is normalized, i.e, the probability density
-
-
+    #fit Zipf-Mandelbrot: P(x, b_ZM, c_ZM)=a_ZM/(x + c_ZM)^b_ZM
+    res_ZM = minimize(L_Zipf_Mandelbrot, (b_0, 0), Y)
+    b_ZM = float(res_ZM['x'][0])
+    c_ZM = float(res_ZM['x'][1])
+    t_ZM = [int(min(T[0])), int(max(T[0])), b_ZM]
+    a_ZM = float(1 / incomplete_shifted_harmonic(t_ZM, c_ZM))
+    
+    degree_component = {}
+    degree_component['abc'] = (a_ZM, b_ZM, c_ZM)
+    degree_component['bc_jac'] = tuple(res_ZM.get('jac'))
+    degree_component['neg_L'] = res_ZM.get('fun')
+    
+    #change theo from probability density to real frequency
     N = sum(T[1])
-    theo = [N * i for i in theo] #change theo from probability density to real frequency
+    theo_ZM = N * Zipf_Mandelbrot(xdata, a_ZM, b_ZM, c_ZM)
 
     fig, ax = plt.subplots()
     plt.plot(T[0], T[1], 'ro', markersize=4)
-    plt.plot(xdata, theo, 'g-')
+    plt.plot(xdata, theo_ZM, 'g-')
 
     #the following code deal with significant figures of fitting parameters
     #the tutor of significant figures: https://www.usna.edu/ChemDept/_files/documents/manual/apdxB.pdf
     #-----------------------------------------
     x_dig = len(str(max(T[0]))) 
     y_dig = len(str(max(T[1])))
-    s_dig = min(x_dig+1, y_dig +1) #significant figures of exponent s, it comes from log(y)/log(x)
-    a_dig = x_dig #significant figures of parameter a
+    b_dig = min(x_dig+1, y_dig +1) #significant figures of exponent b, it comes from log(y)/log(x)
+    c_dig = x_dig #significant figures of parameter c (shift of x)
 
     # the fomat string is #.?g, where ? = significant figures
     # detail of the fomat string: https://bugs.python.org/issue32790
     # https://docs.python.org/3/tutorial/floatingpoint.html
-    S = format(s, '#.%dg' % s_dig)  # give a_dig significant digits
-    A = format(a, '#.%dg' % a_dig)  # give b_dig significant digits
-    if 'e' in S: #make scientific notation more beautiful
-        S = S.split('e')[0] + '\\times 10^{' + str(int(S.split('e')[1])) + '}'
-    if S[-1] == '.':
-        S = S[:-1]
-    if 'e' in A: #make scientific notation more beautiful
-        A = A.split('e')[0] + '\\times 10^{' + str(int(A.split('e')[1])) + '}'
-    if A[-1] == '.':
-        A = A[:-1]
+    B = format(b_ZM, '#.%dg' % b_dig)  # give b_dig significant digits
+    C = format(c_ZM, '#.%dg' % c_dig)  # give c_dig significant digits
+    if 'e' in C: #make scientific notation more beautiful
+        C_text = C.split('e')[0] + '\\times 10^{' + str(int(C.split('e')[1])) + '}'
+    elif C[-1] == '.':
+        C_text = C[:-1]
+    else:
+        C_text = C
+    if 'e' in B: #make scientific notation more beautiful
+        B_text = B.split('e')[0] + '\\times 10^{' + str(int(B.split('e')[1])) + '}'
+    elif B[-1] == '.':
+        B_text = B[:-1]
+    else:
+        B_text = B
+    #-----------------------------------------
 
     parameters = (r"$d_0=%s$"
                       "\n"
-                     r"$\eta=%s$") % (A, S)    
+                     r"$\eta=%s$") % (C_text, B_text)    
 
     text_x = 1.5      
-    text_y = min(theo)
+    text_y = min(theo_ZM)
     plt.text(text_x, text_y, parameters, fontsize = 30)
 
     plt.xlabel('Degree $d_c$', size = 25)
@@ -321,7 +362,8 @@ def plot_degree_compo(name, compo_degree_sequence, FORMAT = 'pdf', Path = ''):
             fig.savefig(Path + 'degree_compo_' + name + '.' + FORMAT, dpi = 400, format = FORMAT)
             plt.close()
     except:
-        plt.show()        
+        plt.show()
+    return degree_component
         
 def build_shortest_path(graph):
     pathL = nx.shortest_path_length(graph)  #shorest path length

@@ -349,7 +349,7 @@ def produce_wordRank_sylRank_frame(pd_word, pd_syl, longest):
         feature = str(k) + "th" + "_syl_rank"
         pd_word[feature] = np.array(D[k])
     
-    return pd_word  
+    return pd_word
 
 
 def info(file_name, encode = "UTF-8"):
@@ -475,12 +475,6 @@ def write_to_excel(big, word, syl, name):
     word.to_excel(writer, 'word')
     syl.to_excel(writer, 'syllagram')
     writer.save()
-    
-def save_parameter(filename, data):
-    f = open(filename, 'a', encoding='utf-8')
-    f.write(data)
-    f.close()
-
 
 def geometric_sequence(word, syl):
     '''give geometric sequence {Hn} and {Vm}
@@ -524,7 +518,6 @@ def geometric_sequence(word, syl):
     
     return V, H
     
-
 def draw_RRD_plot(big, word, syl, longest, name, V, H, need_line = 'Y', number_of_lines = 4, Color = '#ff0000', FORMAT = 'png', Path = ''):
     '''draw the RRD plot and auxiliary lines
     
@@ -552,6 +545,7 @@ def draw_RRD_plot(big, word, syl, longest, name, V, H, need_line = 'Y', number_o
     5. Path: file path for saving picture
         Default: save at current document
         if Path == np.nan, no figure will be saved (just show it)
+        else, the figure will be saved according to Path
     
     ---Return
         coordinate: N*2 array, N = number of points
@@ -615,7 +609,7 @@ def draw_RRD_plot(big, word, syl, longest, name, V, H, need_line = 'Y', number_o
         plt.show()
     return coordinate
     
-def N_syl_dist(name, big, longest, FORMAT = 'png', Path = ''):
+def N_syl_dist(name, big, longest, density = True, FORMAT = 'png', Path = ''):
     '''N-syl means there are N syllagrams in one word, it can be 1, 2, 3..., etc. 
     This function can plot their distribution
     
@@ -623,13 +617,19 @@ def N_syl_dist(name, big, longest, FORMAT = 'png', Path = ''):
     1. name: string
        "XXX" (your file name without filename extension)
     
-    2. FORMAT: string
+    2. density: boolean, True or False
+        If True, each bar will display its raw counts divided by the total number of counts.
+        (y_i = y_i0 / sum_i(y_i0), where y_i0 is the raw counts of i)
+        If False, each bar will display its raw counts.
+    
+    3. FORMAT: string
         The format of your plot. Most backends support png, pdf, ps, eps and svg. 
         else: just show plot instead of saving.
     
-    3. Path: file path for saving picture
+    4. Path: file path for saving picture
         Default: save at current document
         if Path == np.nan, no figure will be saved (just show it)
+        else, the figure will be saved according to Path
     
     ---Input
         big, longest: pandas.DataFrame, int
@@ -641,15 +641,36 @@ def N_syl_dist(name, big, longest, FORMAT = 'png', Path = ''):
     
     '''
     N_syl = big["N_syl"]
-    fig, ax = plt.subplots()
-    plt.hist(N_syl, bins = longest, density = True)
+    freq = big["wordFreq"]
+    N_dist = [0 for i in range(longest)]
+    bar_x = [str(i + 1) for i in range(longest)]
     
-    plt.xlabel('$N-syllagram$', size = 20)
-    plt.ylabel('$\\rho(N)$', size = 20)
-    ax.tick_params(axis='x', labelsize=15) 
-    ax.tick_params(axis='y', labelsize=15)
-    #https://matplotlib.org/api/_as_gen/matplotlib.axes.Axes.ticklabel_format.html
-    ax.ticklabel_format(axis='x', style='sci',scilimits=(0,3))
+    fig, ax = plt.subplots()
+    
+    for i in range(len(freq)):
+        N_dist[N_syl[i] - 1] += freq[i]
+    
+    if density == True:
+        #I don't write N_dist[N_syl[i] - 1] += freq[i]/tot because such calculation is not precise
+        tot = sum(freq)
+        
+        for i in range(len(N_dist)):
+            N_dist[i] = N_dist[i] / tot
+            
+        plt.bar(bar_x, N_dist, width = 1)
+        plt.ylabel('$\\rho_N$ (proportion)', size = 20)
+        
+        
+    elif density == False:
+        plt.bar(bar_x, N_dist, width = 1)
+        plt.ylabel('$\\rho_N$ (counts)', size = 20)
+        
+    else:
+        print('type error: "density" should be boolean (True or False)')
+    
+    plt.xlabel('$N-$syllagram', size = 20)
+    ax.tick_params(axis = 'x', labelsize = 15) 
+    ax.tick_params(axis = 'y', labelsize = 15)
     #https://stackoverflow.com/questions/6774086/why-is-my-xlabel-cut-off-in-my-matplotlib-plot
     plt.gcf().subplots_adjust(left = 0.17, bottom = 0.17)
     plt.title(name, size = 20)
@@ -662,6 +683,8 @@ def N_syl_dist(name, big, longest, FORMAT = 'png', Path = ''):
             plt.close()
     except:
         plt.show()
+
+
 
 def which_plot(name, V, H, x = 'H', max_range = 50, shift = 'N', FORMAT = 'png', Path = ''):
     '''check ratio of geometric sequence {Hn} or {Vm}
@@ -676,7 +699,7 @@ def which_plot(name, V, H, x = 'H', max_range = 50, shift = 'N', FORMAT = 'png',
              V, H = geometric_sequence(word, syl)
        where geometric_sequence(word, syl) is the function of count.py
 
-    3. max_range: number
+    3. max_range: int
         the number of elements in the sequence you want to know
 
     4. x: 'H' or 'V'
@@ -689,6 +712,7 @@ def which_plot(name, V, H, x = 'H', max_range = 50, shift = 'N', FORMAT = 'png',
     6. Path: file path for saving picture
         Default: save at current document
         if Path == np.nan, no figure will be saved (just show it)
+        else, the figure will be saved according to Path
         
     ---Output
         a figure of {H_n}, or {V_m}, depend on the x = 'H' or 'V'
@@ -843,12 +867,25 @@ def FRD_plot(name, word, syl, x_pos = 2, y_pos = 10, FORMAT = 'png', Path = ''):
     5. Path: file path for saving picture
         Default: save at current document
         if Path == np.nan, no figure will be saved (just show it)
+        else, the figure will be saved according to Path
     
     ---Output
         save or show a figure of FRD
     
     ---Return:
-        (C, s): normalized coeffecient and exponent of P(x) = C * x^s
+        FRD_word: dict, where
+        (1) FRD_word['ab']: tuple (a_Z, b_Z)
+                parameters of P(x, b) = a_Z * x^(-b_Z)
+        (2) FRD_word['b_jac']: tuple
+                gradient vector used for optimization
+        (3) FRD_word['neg_L']: float
+                negative max liklihood. 
+                details see Curve_Fitting_MLE.py > L_Zipf_Mandelbrot()
+        (4) FRD_word['length']: int
+                total number of words in the txt
+        (5) FRD_word['V_1'] = int
+                total kinds of words in the txt
+                
     '''
     wf = word['wordFreq']
     cf = syl['sylFreq']
@@ -857,35 +894,53 @@ def FRD_plot(name, word, syl, x_pos = 2, y_pos = 10, FORMAT = 'png', Path = ''):
 
     #use MLE to get the fitting parameter, detial read: Curve_Fitting_MLE
     #-----------------------------------------
+    #T = ([wordRank], [wordFreq])
     T = ([],[])
     for i in word['wordRank']:
         T[0].append(i)
     for i in wf:
         T[1].append(i)
-    #T = ([wordRank], [wordFreq])
+        
     Y = Two_to_One(T)
-    res = minimize(L_Zipf, 1.2, Y, method = 'SLSQP')
-    s = res['x']
-    t = [int(min(T[0])), int(max(T[0])), s]
-    C = 1 / incomplete_harmonic(t)
-    fig, ax = plt.subplots()
-
+    
     xdata = np.linspace(min(T[0]), max(T[0]), num = (max(T[0]) - min(T[0]))*10)
-    theo = Zipf_law(xdata, s, C) #Notice theo is normalized, i.e, the probability density
-    N = sum(T[1])
-    theo = [N * i for i in theo] #change theo from probability density to real frequency
+    
+    #Estimate exponent. This action can make reduce the error of initial value guess.
+    freq_M, freq_m = max(T[1]), min(T[1])
+    rank_M, rank_m = max(T[0]), min(T[0])
+    b_0 = np.log(freq_M / freq_m) / np.log(rank_M / rank_m)
+
+    #fit Zipf: P(x, b)=a_Z/x^b_Z
+    res_Z = minimize(L_Zipf, b_0, Y)
+    b_Z = float(res_Z['x'])
+    t_Z = (int(min(T[0])), int(max(T[0])), b_Z)
+    a_Z = float(1 / incomplete_harmonic(t_Z))
+    
+    #change theo from probability density to real frequency
+    L = sum(T[1]) #total number of words in the txt
+    theo_Z = L * Zipf_law(xdata, a_Z, b_Z)
+    
+    #save the parameters as the return of FRD_plot()
+    FRD_word = {}
+    FRD_word['ab'] = (a_Z, b_Z)
+    FRD_word['b_jac'] = tuple(res_Z.get('jac'))
+    FRD_word['neg_L'] = res_Z.get('fun')
+    FRD_word['length'] = L
+    FRD_word['V_1'] = max(T[0])
+    #-----------------------------------------
+    fig, ax = plt.subplots()
     
     #plt.text(x_position, y_position)
     if (x_pos, y_pos) == (0,0):
         x_mid = 1.2
         y_min = 0.2
-        plt.text(x_mid, y_min,'$b=-%.2f$'% s, fontsize=40) #write formula on the plot
+        plt.text(x_mid, y_min,'$b=-%.2f$'% b_Z, fontsize = 40) #write formula on the plot
     else:
-        plt.text(x_pos, y_pos,'$b=-%.2f$'% s, fontsize=40) #write formula on the plot
+        plt.text(x_pos, y_pos,'$b=-%.2f$'% b_Z, fontsize = 40) #write formula on the plot
     
         
-    plt.plot(xdata, theo, 'g-')
-    #-----------------------------------------
+    plt.plot(xdata, theo_Z, 'g-')
+    
     plt.ylim([0.1, 10*max(max_wf, max_cf)])
     plt.plot(wf, 'ro', label = 'word', markersize=4)
     plt.plot(cf, 'x', label = 'syllagram', markersize=6)
@@ -915,7 +970,7 @@ def FRD_plot(name, word, syl, x_pos = 2, y_pos = 10, FORMAT = 'png', Path = ''):
             plt.close()
     except:
         plt.show()
-    return (C, s)
+    return FRD_word
 
 def draw_density_plot(cooridnate_x, cooridnate_y, slice_number):
     """Input cooridnate of datapoints
